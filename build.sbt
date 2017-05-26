@@ -1,6 +1,6 @@
 // Scala.meta macros are available for two most recent minor versions of Scala.
 // At the time of writing, that's 2.11.11 and 2.12.2.
-scalaVersion in ThisBuild := "2.11.11"
+scalaVersion in ThisBuild := "2.12.2"
 
 lazy val metaMacroSettings: Seq[Def.Setting[_]] = Seq(
   // New-style macro annotations are under active development.  As a result, in
@@ -25,8 +25,10 @@ lazy val macros = project.settings(
   // A dependency on scala.meta is required to write new-style macros, but not
   // to expand such macros.  This is similar to how it works for old-style
   // macros and a dependency on scala.reflect.
-  libraryDependencies += "org.scalameta" %% "scalameta" % "1.7.0"
+  libraryDependencies += "org.scalameta" %% "scalameta" % "1.8.0"
 )
 
 // Use macros in this project.
 lazy val app = project.settings(metaMacroSettings).dependsOn(macros)
+
+lazy val client = project.dependsOn(app)
