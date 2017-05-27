@@ -22,15 +22,15 @@ private[variants] object InclusionMod {
     var inclusion = Default: InclusionMod
 
     mods foreach {
-      case mod @ Mod.Annot(Term.Apply(Ctor.Ref.Name(operation @ ("Include" | "Exclude")), names)) =>
+      case mod @ Mod.Annot(Term.Apply(Ctor.Ref.Name(operation @ (constants.Include | constants.Exclude)), names)) =>
         if (inclusion != Default) panic("Can only include/exclude once", mod.pos)
         else {
           val litargs: Seq[String] =
             names.map { case Lit.String(value) => value }
 
           inclusion = operation match {
-            case "Include" => Includes(litargs)
-            case "Exclude" => Excludes(litargs)
+            case constants.Include => Includes(litargs)
+            case constants.Exclude => Excludes(litargs)
           }
         }
 

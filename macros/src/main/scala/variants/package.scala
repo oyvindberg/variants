@@ -21,4 +21,11 @@ package object variants {
     def pack(ts: Seq[Type]): Option[Type] =
       ts.reduceOption((one, two) => Type.With(one, two))
   }
+
+  private[variants] object constants {
+    val Include:  String = classOf[Include].getSimpleName
+    val Exclude:  String = classOf[Exclude].getSimpleName
+    val Visitors: String = classOf[Visitors].getSimpleName
+    val Variants: String = classOf[Variants].getSimpleName
+  }
 }

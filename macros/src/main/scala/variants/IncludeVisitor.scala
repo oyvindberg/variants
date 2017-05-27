@@ -3,11 +3,27 @@ package variants
 import scala.meta._
 
 private[variants] object IncludeVisitor extends (Defn.Object => Defn.Object) {
-  val Scope      = Type.Name("Scope")
-  val scope      = Term.Name("scope")
-  val childScope = Term.Name("childScope")
-  val _0         = Term.Name("_0")
-  val _1         = Term.Name("_1")
+  val Scope       = Type.Name("Scope")
+  val ScopeTparam = tparam"Scope"
+  val scope       = Term.Name("scope")
+  val childScope  = Term.Name("childScope")
+  val childScopeP = Pat.Var.Term(childScope)
+  val newScope    = Term.Name("newScope")
+  val NewScope    = Type.Name("NewScope")
+  val arg         = Term.Name("x")
+  val argP        = Pat.Var.Term(arg)
+  val first       = Term.Name("_0")
+  val second      = Term.Name("_1")
+  val third       = Term.Name("_2")
+  val firstP      = Pat.Var.Term(first)
+  val secondP     = Pat.Var.Term(second)
+  val thirdP      = Pat.Var.Term(third)
+
+  def visitMethod(x: Name): Term.Name =
+    Term.Name("visit" + x.value)
+
+  def enterMethod(x: Name): Term.Name =
+    Term.Name("enter" + x.value)
 
   override def apply(defn: Defn.Object): Defn.Object =
     defn match {
@@ -20,52 +36,47 @@ private[variants] object IncludeVisitor extends (Defn.Object => Defn.Object) {
               val cases: Seq[Case] =
                 referring.to[Seq] flatMap {
                   case x: Defn.Object if metadata.locallyDefinedNames(x.name.value) =>
-                    val visitName = Term.Name("visit" + x.name.value)
-                    Seq(p"case x: ${x.name}.type => $visitName(t)(x)")
+                    Seq(p"case $argP: ${x.name}.type => ${visitMethod(x.name)}($scope)($arg)")
 
                   case x: Defn.Class if metadata.locallyDefinedNames(x.name.value) =>
-                    val visitName = Term.Name("visit" + x.name.value)
-                    Seq(p"case x: ${x.name} => $visitName(t)(x)")
+                    Seq(p"case $argP: ${x.name} => ${visitMethod(x.name)}($scope)($arg)")
 
                   case x: Defn.Trait if metadata.locallyDefinedNames(x.name.value) =>
-                    val visitName = Term.Name("visit" + x.name.value)
-                    Seq(p"case x: ${x.name} => $visitName(t)(x)")
+                    Seq(p"case $argP: ${x.name} => ${visitMethod(x.name)}($scope)($arg)")
 
                   case other =>
                     println(s"$ctorName: Ignoring inheritance $other")
                     Nil
                 }
 
-              val `match`   = Term.Match(Term.Name("_0"), cases)
-              val name      = Type.Name(ctorName)
-              val visitName = Term.Name(s"visit${name.value}")
+              val `match` = Term.Match(first, cases)
+              val tname   = Type.Name(ctorName)
 
-              q"def $visitName(t: $Scope)(_0: $name): $name = ${`match`}"
+              q"def ${visitMethod(tname)}($scope: $Scope)($first: $tname): $tname = ${`match`}"
           }
 
         val leafDefs: Seq[Defn.Def] =
           metadata.leafs.flatMap {
             case Defn.Object(_, name, _) =>
-              val visitName = Term.Name(s"visit${name.value}")
-              val enterName = Term.Name(s"enter${name.value}")
-
-              val visit = q"final def $visitName(scope: $Scope)(_0: $name.type): $name.type = $enterName(scope)(_0)"
-              val enter = q"def $enterName(scope: $Scope)(_0: $name.type): $name.type = _0"
-              Seq(visit, enter)
-
-            case Defn.Class(_, name, _, Ctor.Primary(_, _, pss), _) =>
-              val termName  = Term.Name(name.value)
-              val enterName = Term.Name(s"enter${name.value}")
-              val visitName = Term.Name(s"visit${name.value}")
+              val tname = Type.Name(name.value + ".type")
 
               val visit = q"""
-                final def $visitName($scope: $Scope)(_0: $name): $name = {
-                  val _1: $name = $enterName($scope)(_0)
-                  lazy val childScope: $Scope = newScope.derive($scope, _1)
-                  val _2: $name = ${visitorCopy(_1, childScope, pss, metadata.locallyDefinedNames)}
-                  _2
+                final def ${visitMethod(name)}($scope: $Scope)($first: $tname): $tname =
+                  ${enterMethod(name)}($scope)($first)
+                """
+
+              val enter = q"def ${enterMethod(name)}($scope: $Scope)($first: $tname): $tname = $first"
+              Seq(visit, enter)
+
+            case Defn.Class(_, tname, _, Ctor.Primary(_, _, pss), _) =>
+              val visit = q"""
+                final def ${visitMethod(tname)}($scope: $Scope)($first: $tname): $tname = {
+                  val $secondP: $tname = ${enterMethod(tname)}($scope)($first)
+                  lazy val $childScopeP: $Scope = $newScope.derive($scope, $second)
+                  val $thirdP: $tname = ${visitorCopy(second, childScope, pss, metadata.locallyDefinedNames)}
+                  $third
               }"""
-              val enter = q"def $enterName($scope: $Scope)(_0: $name): $name = _0"
+              val enter = q"def ${enterMethod(tname)}($scope: $Scope)($first: $tname): $tname = $first"
 
               Seq(visit, enter)
 
@@ -77,7 +88,8 @@ private[variants] object IncludeVisitor extends (Defn.Object => Defn.Object) {
         val VisitorName = Type.Name(base.value + "Visitor")
 
         val visitor: Defn.Class =
-          q"""abstract class $VisitorName[Scope](implicit newScope: NewScope[$Scope, ${metadata.mainTraitName}]) {
+          q"""abstract class $VisitorName[$ScopeTparam]
+                (implicit $newScope: $NewScope[$Scope, ${metadata.mainTraitName}]) {
                 ..$branchDefs
                 ..$leafDefs
               }"""
@@ -97,24 +109,22 @@ private[variants] object IncludeVisitor extends (Defn.Object => Defn.Object) {
       p match {
         case Term.Param(_, paramName: Term.Name, Some(tpe), _) =>
           tpe match {
-            case Type.Name(typeName) =>
-              if (locallyDefinedName(typeName)) {
-                val visitName = Term.Name("visit" + typeName)
-                q"$paramName = $visitName($scope)($owner.$paramName)"
+            case tname: Type.Name =>
+              if (locallyDefinedName(tname.value)) {
+                q"$paramName = ${visitMethod(tname)}($scope)($owner.$paramName)"
               } else q"$paramName = $owner.$paramName"
 
-            case Type.Apply(_, Seq(Type.Name(typeName))) =>
-              if (locallyDefinedName(typeName)) {
-                val visitName = Term.Name("visit" + typeName)
-                q"$paramName = $owner.$paramName.map($visitName($scope))"
+            case Type.Apply(_, Seq(tname: Type.Name)) =>
+              if (locallyDefinedName(tname.value)) {
+                q"$paramName = $owner.$paramName.map(${visitMethod(tname)}($scope))"
               } else q"$paramName = $owner.$paramName"
 
             case other =>
-              panic(s"${other.structure} not supported", other.pos)
+              unexpected(other)
           }
 
         case other =>
-          panic(s"${other.structure} not supported", other.pos)
+          unexpected(other)
       }
 
     pss.tail.foldLeft(q"$owner.copy(..${pss.head map visitMember})") {

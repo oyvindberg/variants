@@ -3,21 +3,21 @@ package variants
 import scala.annotation.{StaticAnnotation, compileTimeOnly}
 import scala.meta._
 
-@compileTimeOnly("`Include` can not be used here")
+@compileTimeOnly(s"`${constants.Include}` can not be used here")
 class Include(targets: String*) extends StaticAnnotation
 
-@compileTimeOnly("`Exclude` can not be used here")
+@compileTimeOnly(s"`${constants.Exclude}` can not be used here")
 class Exclude(targets: String*) extends StaticAnnotation
 
-@compileTimeOnly("`Visitor` must be used parallell to `Variants`")
+@compileTimeOnly(s"`${constants.Visitors}` must be used parallel to `Variants`")
 class Visitors extends StaticAnnotation
 
-@compileTimeOnly("`Variants` can not be used here")
+@compileTimeOnly(s"`${constants.Variants}` can not be used here")
 class Variants(variants: String*) extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
-    val VisitorsAnnot = Mod.Annot(Ctor.Ref.Name("Visitors"))
+    val VisitorsAnnot = Mod.Annot(Ctor.Ref.Name(constants.Visitors))
 
-    val q"new Variants(..$variantLiterals)" = this
+    val q"new ${Ctor.Name(constants.Variants)}(..$variantLiterals)" = this
 
     defn match {
       case Defn.Trait(mods, base, _, _, Template(_, _, _, Some(stats))) =>
@@ -37,8 +37,7 @@ class Variants(variants: String*) extends StaticAnnotation {
         q"..$outWithVisitor"
 
       case other =>
-        panic(s"`Variants` can only be used on traits", other.pos)
+        panic(s"`${constants.Variants}` can only be used on traits", other.pos)
     }
   }
 }
-

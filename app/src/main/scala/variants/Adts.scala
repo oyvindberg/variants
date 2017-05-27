@@ -15,5 +15,4 @@ object testing {
     case class C(i: Int, ts: Seq[T]) extends A
     case class D(@Include("Adt1") i: Int, @Exclude("Adt2") j: Int) extends A
   }
-
 }
