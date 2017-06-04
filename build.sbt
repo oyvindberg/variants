@@ -13,7 +13,7 @@ lazy val metaMacroSettings: Seq[Def.Setting[_]] = Seq(
   // new-style macros.  This is similar to how it works for old-style macro
   // annotations and a dependency on macro paradise 2.x.
 //  addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-M8" cross CrossVersion.full),
-  addCompilerPlugin("org.scalameta" % "paradise_2.12.2" % "3.0.0-314-5a5f7ead"),
+  addCompilerPlugin("org.scalameta" % "paradise_2.12.2" % "3.0.0-315-91b58ff4"),
 
   scalacOptions += "-Xplugin-require:macroparadise",
 //  scalacOptions += "-Xplugin-list",
@@ -23,6 +23,8 @@ lazy val metaMacroSettings: Seq[Def.Setting[_]] = Seq(
   sources in (Compile, doc) := Nil // macroparadise doesn't work with scaladoc yet.
 )
 
+lazy val runtime = project
+
 // Define macros in this project.
 lazy val macros = project.settings(
   metaMacroSettings,
@@ -30,7 +32,7 @@ lazy val macros = project.settings(
   // to expand such macros.  This is similar to how it works for old-style
   // macros and a dependency on scala.reflect.
   libraryDependencies += "org.scalameta" %% "scalameta" % "1.8.0"
-)
+).dependsOn(runtime)
 
 // Use macros in this project.
 lazy val app = project.settings(metaMacroSettings).dependsOn(macros)

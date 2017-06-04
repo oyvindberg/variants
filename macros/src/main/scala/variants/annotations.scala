@@ -9,32 +9,41 @@ class Include(targets: String*) extends StaticAnnotation
 @compileTimeOnly(s"`${constants.Exclude}` can not be used here")
 class Exclude(targets: String*) extends StaticAnnotation
 
-@compileTimeOnly(s"`${constants.Visitors}` must be used parallel to `Variants`")
-class Visitors extends StaticAnnotation
+@compileTimeOnly(s"`${constants.Visitor}` must be used parallel to `Variants`")
+class Visitor extends StaticAnnotation
+
+@compileTimeOnly(s"`${constants.FunctorAnn}` must be used parallel to `Variants`")
+class FunctorAnn extends StaticAnnotation
 
 @compileTimeOnly(s"`${constants.Variants}` can not be used here")
 class Variants(variants: String*) extends StaticAnnotation {
   inline def apply(defn: Any): Any = meta {
-    val VisitorsAnnot = Mod.Annot(Ctor.Ref.Name(constants.Visitors))
 
     val q"new ${Ctor.Name(constants.Variants)}(..$variantLiterals)" = this
 
     defn match {
-      case Defn.Trait(mods, base, _, _, Template(_, _, _, Some(stats))) =>
-        val variants: Seq[String] =
-          variantLiterals.map { case Lit.String(value) => value }
+      case Defn.Trait(mods, base, tparams, _, Template(_, _, _, Some(stats))) =>
+        val variants: Seq[Stat] =
+          variantLiterals.map {
+            case Lit.String(variantString) =>
+              val variant = GenVariant(variantString, tparams, stats)
+              val metadata = AdtMetadata(variant)
 
-        val out: Seq[Defn.Object] =
-          GenVariants(variants, stats)
+              val extras: Seq[Defn] =
+                mods flatMap {
+                  case x if x.syntax === constants.VisitorAnnot.syntax => Some(GenVisitor(metadata))
+                  case x if x.syntax === constants.FunctorAnnot.syntax => Some(GenFunctor(metadata))
+                  case _ => None
+                }
 
-        val outWithVisitor: Seq[Defn] =
-          if (mods exists (_.syntax == VisitorsAnnot.syntax)) {
-            out map IncludeVisitor
-          } else out
+              variant match {
+                case x@Defn.Trait(_, _, _, _, t@Template(_, _, _, Some(stats))) => x.copy(templ = t.copy(stats = Some(stats ++ extras)))
+                case x@Defn.Class(_, _, _, _, t@Template(_, _, _, Some(stats))) => x.copy(templ = t.copy(stats = Some(stats ++ extras)))
+                case x@Defn.Object(_, _, t@Template(_, _, _, Some(stats))) => x.copy(templ = t.copy(stats = Some(stats ++ extras)))
+              }
+          }
 
-        outWithVisitor foreach println
-
-        q"..$outWithVisitor"
+        q"..$variants"
 
       case other =>
         panic(s"`${constants.Variants}` can only be used on traits", other.pos)

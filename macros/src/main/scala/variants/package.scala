@@ -1,14 +1,22 @@
-import scala.meta.{Position, Tree, Type}
+import scala.meta.{Ctor, Defn, Mod, Pat, Position, Tree, Type}
 
 package object variants {
   private[variants] type Seq[T] = scala.collection.immutable.Seq[T]
   private[variants] val Seq = scala.collection.immutable.Seq
 
-  private[variants] def panic(msg: String, position: Position) =
+  private[variants] def panic(msg: String, position: Position): Nothing =
     throw new RuntimeException(s"Error: $msg at $position")
 
-  private[variants] def unexpected(t: Tree) =
-    throw new RuntimeException(s"Error: ${t.syntax} at ${t.pos}: structure: ${t.structure}")
+  private[variants] def unexpected(t: Tree): Nothing =
+    throw new RuntimeException(s"Unexpected: ${t.syntax} at ${t.pos}: structure: ${t.structure}")
+
+  def debug(str: String, t: Tree) =
+    println(s"$str: ${t.syntax}: ${t.structure}")
+
+  private [variants] implicit class AnyOps[T](private val t: T) {
+    def ===(other: T): Boolean = t == other
+    def =/=(other: T): Boolean = t != other
+  }
 
   /* handling nested types which are connected with `with` is a bit unwieldy, so... */
   private[variants] object With {
@@ -23,9 +31,26 @@ package object variants {
   }
 
   private[variants] object constants {
+    val FunctorAnn: String = classOf[FunctorAnn].getSimpleName
     val Include:  String = classOf[Include].getSimpleName
     val Exclude:  String = classOf[Exclude].getSimpleName
-    val Visitors: String = classOf[Visitors].getSimpleName
+    val Visitor: String = classOf[Visitor].getSimpleName
     val Variants: String = classOf[Variants].getSimpleName
+
+    val Functor: String = classOf[Functor[Functor]].getSimpleName
+    val NewScope: String = classOf[NewScope[_, _]].getSimpleName
+
+    val VisitorAnnot = Mod.Annot(Ctor.Ref.Name(constants.Visitor))
+    val FunctorAnnot = Mod.Annot(Ctor.Ref.Name(constants.FunctorAnn))
   }
+
+  def objectType(obj: Defn.Object): Type.Name =
+    Type.Name(obj.name.value + ".type")
+
+  def applyType(tpe: Type.Name, tparams: Seq[Type.Param]): Type =
+    if (tparams.nonEmpty) Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
+
+  def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =
+    if (tparams.nonEmpty) Pat.Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
+
 }
