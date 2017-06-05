@@ -2,7 +2,7 @@ package variants
 
 import scala.meta._
 
-private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
+private[variants] object GenVisitor extends (AdtMetadata => Defn) {
   def visitMethod(x: Name): Term.Name =
     Term.Name("visit" + x.value)
 
@@ -21,7 +21,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
   val childScope = Term.Name("childScope")
   val argX       = Term.Name("x")
 
-  override def apply(metadata: AdtMetadata): Defn.Class = {
+  override def apply(metadata: AdtMetadata): Defn = {
     val branchDefs: Seq[Defn.Def] =
       metadata.branches.map {
         case Defn.Trait(_, tname, tparams, _, _) =>
@@ -68,14 +68,14 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
           )
       }
 
-    val scopeTParam = Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil)
+    val newScope = param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]"
 
-    q"""class ${visitorType(metadata.adtName)}[$scopeTParam, ..${metadata.mainTrait.tparams}]
-              (implicit ${instance(NewScope)} : $NewScope[$Scope, ${applyType(metadata.mainTrait.name,
-                                                                              metadata.mainTrait.tparams)}]) {
-          ..$branchDefs
-          ..$leafDefs
-        }"""
+    defn(
+      visitorType(metadata.adtName),
+      Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: metadata.mainTrait.tparams,
+      Seq(newScope),
+      branchDefs ++ leafDefs
+    )
   }
 
   def genNewInstanceFrom(owner:                Term.Name,

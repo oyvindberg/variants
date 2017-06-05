@@ -38,10 +38,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
 
     val baseName: String = metadata.adtName.value + "Functors"
 
-    if (externalFunctors.isEmpty) {
-      q"object ${Term.Name(baseName)} {..$contents}"
-    } else
-      q"class ${Type.Name(baseName)}(..${externalFunctors.map(_.asImplicitParam)}) {..$contents}"
+    defn(Type.Name(baseName), Nil, externalFunctors.map(_.asImplicitParam), contents)
   }
 
   sealed trait FunctorDef {

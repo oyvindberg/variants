@@ -60,4 +60,13 @@ package object variants {
   private[variants] def term2pat(x:   Term.Name):  Pat.Var.Term = Pat.Var.Term(x)
   private[variants] def instance(x:   Type.Name):  Term.Name    = Term.Name(x.value.toLowerCase)
 
+  private[variants] def defn(name:    Type.Name,
+                             tparams: Seq[Type.Param],
+                             params:  Seq[Term.Param],
+                             stats:   Seq[Stat]): Defn =
+    (tparams.isEmpty, params.isEmpty) match {
+      case (true, true)  => q"object ${type2term(name)}{..$stats}"
+      case (true, false) => q"trait $name[..$tparams]{..$stats}"
+      case _             => q"class $name[..$tparams](..$params){..$stats}"
+    }
 }
