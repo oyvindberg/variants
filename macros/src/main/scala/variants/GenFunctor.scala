@@ -6,18 +6,21 @@ import scala.meta._
 private[variants] object GenFunctor extends (AdtMetadata => Defn) {
 
   val Functor = Type.Name(constants.Functor)
-  val argX    = Term.Name("x")
-  val argY    = Term.Name("y")
   val f       = Term.Name("f")
+  val arg     = Term.Name("x")
 
   def repeatType(t: Type.Param): Type.Param =
     t.copy(name = Type.Name(t.name.value * 2))
 
   override def apply(metadata: AdtMetadata): Defn = {
-    val externalFunctors: Seq[External] =
-      metadata.classes.flatMap { leaf =>
-        externalFunctorsFor(metadata, leaf)
-      }.distinct
+    val externalFunctors =
+      metadata.externalTypeCtors.map {
+        case (name, applied@Type.Apply(_, tparams)) =>
+          tparams.size match {
+          case 1 => External(name)
+          case n => panic(s"We only support type constructors with one param, $name has $n", applied.pos)
+        }
+      }.to[Seq]
 
     val locallyDefinedFunctors: Map[String, FunctorDef] =
       metadata.locallyDefined.map {
@@ -82,10 +85,10 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
 
       q"""implicit lazy val ${term2pat(functorName)}: $Functor[$typeName] =
             new ${type2ctor(Functor)}[$typeName] {
-              def map[$from, $to]($argX: ${applyType(typeName, Seq(from))})
+              def map[$from, $to]($arg: ${applyType(typeName, Seq(from))})
                                  ($f: ${param2type(from)} => ${param2type(to)})
                                  : ${applyType(typeName, Seq(to))} =
-              ${Term.Match(argX, cases)}
+              ${Term.Match(arg, cases)}
               }
           """
     }
@@ -94,7 +97,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
       Some(asFunctor(lookup))
 
     override def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${term2pat(argX)}: ${applyTypePat(typeName, branch.tparams)} => $functorName.map($argX)($f)")
+      Some(p"case ${term2pat(arg)}: ${applyTypePat(typeName, branch.tparams)} => $functorName.map($arg)($f)")
   }
 
   final case class LocalClass(leaf: Defn.Class) extends FunctorDef {
@@ -105,7 +108,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
     def to:   Type.Param = repeatType(from)
 
     def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${{ term2pat(argX) }}: ${applyTypePat(typeName, leaf.tparams)} => $functorName.map($argX)($f)")
+      Some(p"case ${term2pat(arg)}: ${applyTypePat(typeName, leaf.tparams)} => $functorName.map($arg)($f)")
 
     override def toSeq(lookup: Map[String, FunctorDef]): Option[Defn] =
       Some(asFunctor(lookup))
@@ -113,10 +116,10 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
     def asFunctor(lookup: Map[String, FunctorDef]): Defn =
       q"""implicit lazy val ${term2pat(functorName)}: $Functor[$typeName] =
             new ${type2ctor(Functor)}[$typeName] {
-              def map[$from, $to]($argX: ${applyType(typeName, Seq(from))})
+              def map[$from, $to]($arg: ${applyType(typeName, Seq(from))})
                                  ($f: ${param2type(from)} => ${param2type(to)})
                                  : ${applyType(typeName, Seq(to))} =
-                ${genNewInstanceFrom(lookup, argX, typeName, param2type(from), param2type(to), leaf.ctor.paramss)}
+                ${genNewInstanceFrom(lookup, arg, typeName, param2type(from), param2type(to), leaf.ctor.paramss)}
               }
           """
 
@@ -130,19 +133,19 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
       def wrap(f: Term => Term): Term => Term =
         (x: Term) => f(x)
 
-      def go(paramName: Term.Name)(arg: Type.Arg): Option[Term => Term] =
-        arg match {
+      def nestedMapAppliesFor(param: Term.Name)(tpe: Type.Arg): Option[Term => Term] =
+        tpe match {
           case tname: Type.Name =>
             if (tname.syntax === from.syntax) Some(wrap(term => q"$f($term)")) else None
 
-          case Type.Apply(Type.Name(current), Seq(targ)) =>
-            go(paramName)(targ).map { (base: Term => Term) =>
+          case Type.Apply(Type.Name(current), Seq(nextTpe)) =>
+            nestedMapAppliesFor(param)(nextTpe).map { (base: Term => Term) =>
               val inner: Term =
-                base(argX) match {
-                  case simple if simple.syntax === Term.Apply(f, Seq(argX)).syntax => //optimize away a lambda
+                base(arg) match {
+                  case simple if simple.syntax === Term.Apply(f, Seq(arg)).syntax => //optimize away a lambda
                     f
                   case other =>
-                    Term.Function(Seq(Term.Param(Nil, argX, None, None)), other)
+                    Term.Function(Seq(Term.Param(Nil, arg, None, None)), other)
                 }
 
               wrap(term => q"${lookup(current).functorName}.map($term)($inner)")
@@ -154,7 +157,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
       def copyParam(p: Term.Param): Term.Arg =
         p match {
           case Term.Param(_, paramName: Term.Name, Some(tpe: Type.Arg), _) =>
-            go(paramName)(tpe) match {
+            nestedMapAppliesFor(paramName)(tpe) match {
               case Some(base) => q"$paramName = ${base(Term.Select(owner, paramName))}"
               case None       => q"$paramName = $owner.$paramName"
             }
@@ -174,7 +177,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
     override def typeName: Type.Name = objectType(leaf)
 
     def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${{ term2pat(argX) }}: $typeName => $argX")
+      Some(p"case ${term2pat(arg)}: $typeName => $arg")
 
     override def toSeq(lookup: Map[String, FunctorDef]): Option[Defn.Def] =
       None
@@ -190,15 +193,4 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
       Type.Name(name)
 
   }
-
-  private def externalFunctorsFor(metadata: AdtMetadata, leaf: Defn): Set[External] =
-    leaf
-      .collect {
-        case applied @ Type.Apply(Type.Name(tpe), tparams) if !metadata.localNames.contains(tpe) =>
-          tparams.size match {
-            case 1 => External(tpe)
-            case n => panic(s"We only support type constructors with one param, $tpe has $n", applied.pos)
-          }
-      }
-      .to[Set]
 }

@@ -6,27 +6,35 @@ import scala.meta.{Ctor, Defn, Name, Stat, Template, Term, Type}
 private[variants] case class AdtMetadata private (adtName:        Name,
                                                   mainTrait:      Defn.Trait,
                                                   locallyDefined: Map[String, Defn]) {
+  lazy val localNames: Set[String] =
+    locallyDefined.keys.to[Set]
+
+  lazy val localDefs: Seq[Defn] =
+    locallyDefined.values.to[Seq]
+
   lazy val leafs: Seq[Defn] =
-    locallyDefined.values.to[Seq].collect {
+    localDefs.collect {
       case x: Defn.Object => x
-      case x: Defn.Class => x
+      case x: Defn.Class  => x
     }
 
   lazy val classes: Seq[Defn.Class] =
-    locallyDefined.values.to[Seq].collect {
+    localDefs.collect {
       case x: Defn.Class => x
     }
 
   lazy val branches: Seq[Defn.Trait] =
-    locallyDefined.values.to[Seq].collect {
+    localDefs.collect {
       case x: Defn.Trait => x
     }
 
   lazy val inheritance: Map[String, Set[Defn]] =
     AdtMetadata.inheritanceMap(locallyDefined)
 
-  lazy val localNames: Seq[String] =
-    locallyDefined.keys.to[Seq]
+  lazy val externalTypeCtors: Map[String, Type.Apply] =
+    localDefs.foldLeft(Map.empty[String, Type.Apply]) {
+      case (acc, defn) => acc ++ AdtMetadata.externalTypeCtors(defn, localNames)
+    }
 }
 
 private[variants] object AdtMetadata {
@@ -35,14 +43,14 @@ private[variants] object AdtMetadata {
       case Defn.Object(_, name, Template(_, _, _, Some(stats)))      => fromStats(name, stats)
       case Defn.Trait(_, name, _, _, Template(_, _, _, Some(stats))) => fromStats(name, stats)
       case Defn.Class(_, name, _, _, Template(_, _, _, Some(stats))) => fromStats(name, stats)
-      case other                                                         => unexpected(other)
+      case other                                                     => unexpected(other)
     }
 
   def fromStats(adtName: Name, stats: Seq[Stat]): AdtMetadata = {
 
     val mainTrait: Defn.Trait =
       stats collectFirst { case x: Defn.Trait => x } getOrElse
-        panic("Must have a primary trait (defined first) to derive a visitor", stats.head.pos)
+        panic(s"ADT in ${adtName.value} must have a primary trait (defined first)", stats.head.pos)
 
     val locallyDefined: Map[String, Defn] =
       stats.collect {
@@ -105,5 +113,10 @@ private[variants] object AdtMetadata {
         withParentRefs(acc, x, parentRefs)
     }
   }
+
+  def externalTypeCtors(defn: Defn, isLocallyDefined: String => Boolean): Map[String, Type.Apply] =
+    defn.collect {
+      case applied @ Type.Apply(Type.Name(tpe), _) if !isLocallyDefined(tpe) => tpe -> applied
+    }.toMap
 
 }

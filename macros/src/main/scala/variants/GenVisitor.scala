@@ -27,74 +27,62 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
         case Defn.Trait(_, tname, tparams, _, _) =>
           val cases: Seq[Case] =
             metadata.inheritance.get(tname.value).to[Seq].flatten.map {
-              case x: Defn.Object => matchOn(x.name, objectType(x), Nil)
-              case x: Defn.Class  => matchOn(Term.Name(x.name.value), x.name, x.tparams)
-              case x: Defn.Trait  => matchOn(Term.Name(x.name.value), x.name, x.tparams)
-              case other => unexpected(other)
+              case x: Defn.Object =>
+                p"case ${term2pat(argX)}: ${objectType(x)} => ${visitMethod(x.name)}($scope)($argX)"
+              case x: Defn.Class =>
+                p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
+              case x: Defn.Trait =>
+                p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
             }
 
-          val `match` = if (cases.nonEmpty) Term.Match(first, cases) else first
+          val Tpe = applyType(tname, tparams)
 
-          val appliedType = applyType(tname, tparams)
-          q"def ${visitMethod(tname)}($scope: $Scope)($first: $appliedType): $appliedType = ${`match`}"
+          q"def ${visitMethod(tname)}($scope: $Scope)($first: $Tpe): $Tpe = ${if (cases.nonEmpty) Term.Match(first, cases)
+          else first}"
       }
 
     val leafDefs: Seq[Defn.Def] =
       metadata.leafs.flatMap {
         case o @ Defn.Object(_, name, _) =>
-          val tname = objectType(o)
-
-          val visit = q"""
-                final def ${visitMethod(name)}($scope: $Scope)($first: $tname): $tname =
-                  ${enterMethod(name)}($scope)($first)
-                """
-
-          val enter = q"def ${enterMethod(name)}($scope: $Scope)($first: $tname): $tname = $first"
-
-          Seq(visit, enter)
+          val Tpe = objectType(o)
+          Seq(
+            q"final def ${visitMethod(name)}($scope: $Scope)($first: $Tpe): $Tpe = ${enterMethod(name)}($scope)($first)",
+            q"def ${enterMethod(name)}($scope: $Scope)($first: $Tpe): $Tpe = $first"
+          )
 
         case Defn.Class(_, tpe, tparams: Seq[Type.Param], Ctor.Primary(_, _, pss), _) =>
-          val appliedType = applyType(tpe, tparams)
-
-          val visit = q"""
-                final def ${visitMethod(tpe)}($scope: $Scope)($first: $appliedType): $appliedType = {
-                  val ${term2pat(second)}: $appliedType = ${enterMethod(tpe)}($scope)($first)
+          val Tpe = applyType(tpe, tparams)
+          Seq(
+            q"def ${enterMethod(tpe)}($scope: $Scope)($first: $Tpe): $Tpe = $first",
+            q"""
+                final def ${visitMethod(tpe)}($scope: $Scope)($first: $Tpe): $Tpe = {
+                  val ${term2pat(second)}: $Tpe = ${enterMethod(tpe)}($scope)($first)
                   lazy val ${term2pat(childScope)}: $Scope = ${instance(NewScope)}.derive($scope, $second)
-                  val ${term2pat(third)}: $appliedType =
-                    ${genCopy(second, childScope, pss, metadata.locallyDefined.contains)}
+                  val ${term2pat(third)}: $Tpe = ${genNewInstanceFrom(second,
+                                                                      childScope,
+                                                                      type2ctor(tpe),
+                                                                      pss,
+                                                                      metadata.localNames)}
                   $third
               }"""
-
-          val enter = q"def ${enterMethod(tpe)}($scope: $Scope)($first: $appliedType): $appliedType = $first"
-
-          Seq(visit, enter)
-
-        case other => unexpected(other)
+          )
       }
 
     val scopeTParam = Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil)
 
-    q"""abstract class ${visitorType(metadata.adtName)}[$scopeTParam, ..${metadata.mainTrait.tparams}]
-              (implicit ${instance(NewScope)}
-              : $NewScope[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]) {
+    q"""class ${visitorType(metadata.adtName)}[$scopeTParam, ..${metadata.mainTrait.tparams}]
+              (implicit ${instance(NewScope)} : $NewScope[$Scope, ${applyType(metadata.mainTrait.name,
+                                                                              metadata.mainTrait.tparams)}]) {
           ..$branchDefs
           ..$leafDefs
         }"""
   }
 
-  def matchOn(termName: Term.Name, typeName: Type.Name, tparams: Seq[Type.Param]): Case =
-    Case(
-      Pat.Typed({ term2pat(argX) },
-                if (tparams.isEmpty) typeName
-                else Pat.Type.Apply(typeName, tparams.map(tp => Type.Name(tp.name.value)))),
-      None,
-      Term.Apply(Term.Apply(visitMethod(termName), Seq(scope)), Seq(argX))
-    )
-
-  def genCopy(owner:                Term.Name,
-              scope:                Term.Name,
-              pss:                  Seq[Seq[Term.Param]],
-              isLocallyDefinedName: String => Boolean): Term.Apply = {
+  def genNewInstanceFrom(owner:                Term.Name,
+                         scope:                Term.Name,
+                         ctor:                 Ctor.Name,
+                         pss:                  Seq[Seq[Term.Param]],
+                         isLocallyDefinedName: String => Boolean): Term = {
 
     def handleParam(p: Term.Param): Term.Arg =
       p match {
@@ -121,7 +109,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
         case other => unexpected(other)
       }
 
-    pss.tail.foldLeft(q"$owner.copy(..${pss.head map handleParam})") {
+    pss.tail.foldLeft(q"new $ctor(..${pss.head map handleParam})": Term) {
       case (call, args) => Term.Apply(call, args map handleParam)
     }
   }
