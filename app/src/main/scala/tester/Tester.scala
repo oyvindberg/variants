@@ -1,6 +1,8 @@
-package variants
+package tester
 
-object O extends App {
+import variants.{Functor, Exclude, FunctorAnn, Include, NewScope, Variants, Visitor}
+
+object Tester extends App {
   @Visitor
   @FunctorAnn
   @Variants("Adt1", "Adt2")
