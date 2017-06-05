@@ -12,11 +12,14 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
   def visitorType(x: Name): Type.Name =
     Type.Name(x.value + "Visitor")
 
-  val Scope  = Type.Name("Scope")
-  val scope  = instance(Scope)
-  val first  = Term.Name("_0")
-  val second = Term.Name("_1")
-  val third  = Term.Name("_2")
+  val NewScope   = Type.Name(constants.NewScope)
+  val Scope      = Type.Name("Scope")
+  val scope      = instance(Scope)
+  val first      = Term.Name("_0")
+  val second     = Term.Name("_1")
+  val third      = Term.Name("_2")
+  val childScope = Term.Name("childScope")
+  val argX       = Term.Name("x")
 
   override def apply(metadata: AdtMetadata): Defn.Class = {
     val branchDefs: Seq[Defn.Def] =
@@ -56,9 +59,9 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
           val visit = q"""
                 final def ${visitMethod(tpe)}($scope: $Scope)($first: $appliedType): $appliedType = {
                   val ${term2pat(second)}: $appliedType = ${enterMethod(tpe)}($scope)($first)
-                  lazy val ${term2pat(Names.childScope)}: $Scope = ${instance(Names.NewScope)}.derive($scope, $second)
+                  lazy val ${term2pat(childScope)}: $Scope = ${instance(NewScope)}.derive($scope, $second)
                   val ${term2pat(third)}: $appliedType =
-                    ${genCopy(second, Names.childScope, pss, metadata.locallyDefined.contains)}
+                    ${genCopy(second, childScope, pss, metadata.locallyDefined.contains)}
                   $third
               }"""
 
@@ -72,8 +75,8 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
     val scopeTParam = Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil)
 
     q"""abstract class ${visitorType(metadata.adtName)}[$scopeTParam, ..${metadata.mainTrait.tparams}]
-              (implicit ${instance(Names.NewScope)}
-              : ${Names.NewScope}[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]) {
+              (implicit ${instance(NewScope)}
+              : $NewScope[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]) {
           ..$branchDefs
           ..$leafDefs
         }"""
@@ -81,11 +84,11 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
 
   def matchOn(termName: Term.Name, typeName: Type.Name, tparams: Seq[Type.Param]): Case =
     Case(
-      Pat.Typed({ term2pat(Names.arg) },
+      Pat.Typed({ term2pat(argX) },
                 if (tparams.isEmpty) typeName
                 else Pat.Type.Apply(typeName, tparams.map(tp => Type.Name(tp.name.value)))),
       None,
-      Term.Apply(Term.Apply(visitMethod(termName), Seq(scope)), Seq(Names.arg))
+      Term.Apply(Term.Apply(visitMethod(termName), Seq(scope)), Seq(argX))
     )
 
   def genCopy(owner:                Term.Name,

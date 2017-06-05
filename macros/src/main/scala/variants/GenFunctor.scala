@@ -3,9 +3,17 @@ package variants
 import scala.collection.breakOut
 import scala.meta._
 
-private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
+private[variants] object GenFunctor extends (AdtMetadata => Defn) {
 
-  override def apply(metadata: AdtMetadata): Defn.Class = {
+  val Functor = Type.Name(constants.Functor)
+  val argX    = Term.Name("x")
+  val argY    = Term.Name("y")
+  val f       = Term.Name("f")
+
+  def repeatType(t: Type.Param): Type.Param =
+    t.copy(name = Type.Name(t.name.value * 2))
+
+  override def apply(metadata: AdtMetadata): Defn = {
     val externalFunctors: Seq[External] =
       metadata.classes.flatMap { leaf =>
         externalFunctorsFor(metadata, leaf)
@@ -22,16 +30,15 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
     val allFunctors: Map[String, FunctorDef] =
       locallyDefinedFunctors ++ externalFunctors.map(e => e.name -> e)
 
-    Defn.Class(
-      Nil,
-      Type.Name(metadata.adtName.value + "Functors"),
-      Nil,
-      Ctor.Primary(Nil, Ctor.Ref.Name("this"), Seq(externalFunctors.map(_.asImplicitParam))),
-      Template(Nil,
-               Nil,
-               Term.Param(Nil, Name.Anonymous(), None, None),
-               Some(locallyDefinedFunctors.flatMap(_._2.toSeq(allFunctors)).to[Seq]))
-    )
+    val contents: Seq[Defn] =
+      locallyDefinedFunctors.flatMap(_._2.toSeq(allFunctors)).to[Seq]
+
+    val baseName: String = metadata.adtName.value + "Functors"
+
+    if (externalFunctors.isEmpty) {
+      q"object ${Term.Name(baseName)} {..$contents}"
+    } else
+      q"class ${Type.Name(baseName)}(..${externalFunctors.map(_.asImplicitParam)}) {..$contents}"
   }
 
   sealed trait FunctorDef {
@@ -52,14 +59,14 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
     def asCase(f: Term.Name): Option[Case]
 
     final def asImplicitParam: Term.Param =
-      Term.Param(Seq(Mod.Implicit()), functorName, Some(Type.Apply(Names.Functor, Seq(typeName))), None)
+      Term.Param(Seq(Mod.Implicit()), functorName, Some(Type.Apply(Functor, Seq(typeName))), None)
   }
 
   final case class LocalBranch(branch: Defn.Trait, inheritees: Set[Defn]) extends FunctorDef {
     override def typeName: Type.Name = branch.name
 
     def from: Type.Param = branch.tparams.head
-    def to:   Type.Param = Names.double(from)
+    def to:   Type.Param = repeatType(from)
 
     def asFunctor(lookup: Map[String, FunctorDef]): Defn = {
       val cases: Seq[Case] =
@@ -71,14 +78,14 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
             case x: Defn.Object => lookup.get(x.name.value)
           }
           .sortBy(_.typeName.value)
-          .flatMap(_.asCase(Names.f))
+          .flatMap(_.asCase(f))
 
-      q"""implicit lazy val ${term2pat(functorName)}: ${Names.Functor}[$typeName] =
-            new ${type2ctor(Names.Functor)}[$typeName] {
-              def map[$from, $to](${Names.arg}: ${applyType(typeName, Seq(from))})
-                                 (${Names.f}: ${param2type(from)} => ${param2type(to)})
+      q"""implicit lazy val ${term2pat(functorName)}: $Functor[$typeName] =
+            new ${type2ctor(Functor)}[$typeName] {
+              def map[$from, $to]($argX: ${applyType(typeName, Seq(from))})
+                                 ($f: ${param2type(from)} => ${param2type(to)})
                                  : ${applyType(typeName, Seq(to))} =
-              ${Term.Match(Names.arg, cases)}
+              ${Term.Match(argX, cases)}
               }
           """
     }
@@ -87,8 +94,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
       Some(asFunctor(lookup))
 
     override def asCase(f: Term.Name): Some[Case] =
-      Some(
-        p"case ${term2pat(Names.arg)}: ${applyTypePat(typeName, branch.tparams)} => $functorName.map(${Names.arg})($f)")
+      Some(p"case ${term2pat(argX)}: ${applyTypePat(typeName, branch.tparams)} => $functorName.map($argX)($f)")
   }
 
   final case class LocalClass(leaf: Defn.Class) extends FunctorDef {
@@ -96,22 +102,21 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
     override def typeName: Type.Name = leaf.name
 
     def from: Type.Param = leaf.tparams.head
-    def to:   Type.Param = Names.double(from)
+    def to:   Type.Param = repeatType(from)
 
     def asCase(f: Term.Name): Some[Case] =
-      Some(
-        p"case ${{ term2pat(Names.arg) }}: ${applyTypePat(typeName, leaf.tparams)} => $functorName.map(${Names.arg})($f)")
+      Some(p"case ${{ term2pat(argX) }}: ${applyTypePat(typeName, leaf.tparams)} => $functorName.map($argX)($f)")
 
     override def toSeq(lookup: Map[String, FunctorDef]): Option[Defn] =
       Some(asFunctor(lookup))
 
     def asFunctor(lookup: Map[String, FunctorDef]): Defn =
-      q"""implicit lazy val ${term2pat(functorName)}: ${Names.Functor}[$typeName] =
-            new ${type2ctor(Names.Functor)}[$typeName] {
-              def map[$from, $to](${Names.arg}: ${applyType(typeName, Seq(from))})
-                                 (${Names.f}: ${param2type(from)} => ${param2type(to)})
+      q"""implicit lazy val ${term2pat(functorName)}: $Functor[$typeName] =
+            new ${type2ctor(Functor)}[$typeName] {
+              def map[$from, $to]($argX: ${applyType(typeName, Seq(from))})
+                                 ($f: ${param2type(from)} => ${param2type(to)})
                                  : ${applyType(typeName, Seq(to))} =
-                ${genNewInstanceFrom(lookup, Names.arg, typeName, param2type(from), param2type(to), leaf.ctor.paramss)}
+                ${genNewInstanceFrom(lookup, argX, typeName, param2type(from), param2type(to), leaf.ctor.paramss)}
               }
           """
 
@@ -128,16 +133,16 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
       def go(paramName: Term.Name)(arg: Type.Arg): Option[Term => Term] =
         arg match {
           case tname: Type.Name =>
-            if (tname.syntax === from.syntax) Some(wrap(term => q"${Names.f}($term)")) else None
+            if (tname.syntax === from.syntax) Some(wrap(term => q"$f($term)")) else None
 
           case Type.Apply(Type.Name(current), Seq(targ)) =>
             go(paramName)(targ).map { (base: Term => Term) =>
               val inner: Term =
-                base(Names.Y) match {
-                  case simple if simple.syntax === Term.Apply(Names.f, Seq(Names.Y)).syntax => //optimize away a lambda
-                    Names.f
+                base(argX) match {
+                  case simple if simple.syntax === Term.Apply(f, Seq(argX)).syntax => //optimize away a lambda
+                    f
                   case other =>
-                    Term.Function(Seq(Term.Param(Nil, Names.Y, None, None)), other)
+                    Term.Function(Seq(Term.Param(Nil, argX, None, None)), other)
                 }
 
               wrap(term => q"${lookup(current).functorName}.map($term)($inner)")
@@ -169,7 +174,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
     override def typeName: Type.Name = objectType(leaf)
 
     def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${{ term2pat(Names.arg) }}: $typeName => ${Names.arg}")
+      Some(p"case ${{ term2pat(argX) }}: $typeName => $argX")
 
     override def toSeq(lookup: Map[String, FunctorDef]): Option[Defn.Def] =
       None

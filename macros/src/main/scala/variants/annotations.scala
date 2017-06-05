@@ -26,7 +26,14 @@ class Variants(variants: String*) extends StaticAnnotation {
         val variants: Seq[Stat] =
           variantLiterals.map {
             case Lit.String(variantString) =>
-              val variant = GenVariant(variantString, tparams, stats)
+              val restMods: Seq[Mod] =
+                mods filter {
+                  case x if x.syntax === constants.VisitorAnnot.syntax => false
+                  case x if x.syntax === constants.FunctorAnnot.syntax => false
+                  case _ => true
+                }
+
+              val variant = GenVariant(variantString, restMods, tparams, stats)
               val metadata = AdtMetadata(variant)
 
               val extras: Seq[Defn] =

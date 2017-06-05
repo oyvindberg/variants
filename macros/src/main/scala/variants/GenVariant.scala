@@ -3,14 +3,14 @@ package variants
 import scala.meta._
 
 private[variants] object GenVariant {
-  def apply(currentObject: String, tparams: Seq[Type.Param], stats: Seq[Stat]): Defn = {
+  def apply(currentObject: String, restMods: Seq[Mod], tparams: Seq[Type.Param], stats: Seq[Stat]): Defn = {
       val filter     = TreeFilter(currentObject) andThen (_.toSeq)
       val newStats   = stats flatMap filter
 
       if (tparams.nonEmpty)
-        q"""trait ${Type.Name(currentObject)}[..$tparams] { ..$newStats }"""
+        q"""..$restMods trait ${Type.Name(currentObject)}[..$tparams] { ..$newStats }"""
       else
-        q"""object ${Term.Name(currentObject)} { ..$newStats }"""
+        q"""..$restMods object ${Term.Name(currentObject)} { ..$newStats }"""
     }
 
   case class TreeFilter(thisVersion: String) extends (Stat => Option[Stat]) {
