@@ -12,6 +12,11 @@ private[variants] case class AdtMetadata private (adtName:        Name,
       case x: Defn.Class => x
     }
 
+  lazy val classes: Seq[Defn.Class] =
+    locallyDefined.values.to[Seq].collect {
+      case x: Defn.Class => x
+    }
+
   lazy val branches: Seq[Defn.Trait] =
     locallyDefined.values.to[Seq].collect {
       case x: Defn.Trait => x

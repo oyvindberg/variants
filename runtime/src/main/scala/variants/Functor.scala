@@ -1,6 +1,8 @@
 package variants
 
-import scala.language.higherKinds
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.{higherKinds, implicitConversions}
+import scala.collection.immutable.Seq
 
 trait Functor[M[_]] {
   def map[T, U](ts: M[T])(f: T => U): M[U]
@@ -15,6 +17,10 @@ object Functor {
 
   implicit object OptionFunctor extends Functor[Option] {
     override def map[T, U](ts: Option[T])(f: (T) => U): Option[U] = ts map f
+  }
+
+  implicit def FutureFunctor(implicit ec: ExecutionContext): Functor[Future] = new Functor[Future] {
+    override def map[T, U](ts: Future[T])(f: (T) => U): Future[U] = ts map f
   }
 
   implicit class FunctorOps[M[_]: Functor, T](m: M[T]) {

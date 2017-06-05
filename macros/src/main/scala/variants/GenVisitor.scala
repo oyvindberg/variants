@@ -51,7 +51,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
           val visit = q"""
                 final def ${visitMethod(tpe)}($scope: $Scope)($first: $appliedType): $appliedType = {
                   val $secondP: $appliedType = ${enterMethod(tpe)}($scope)($first)
-                  lazy val $childScopeP: $Scope = $newScope.derive($scope, $second)
+                  lazy val $childScopeP: $Scope = ${Names.instance(Names.NewScope)}.derive($scope, $second)
                   val $thirdP: $appliedType = ${genCopy(second, childScope, pss, metadata.locallyDefined.contains)}
                   $third
               }"""
@@ -64,8 +64,8 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
       }
 
     q"""abstract class ${visitorType(metadata.adtName)}[$ScopeTparam, ..${metadata.mainTrait.tparams}]
-              (implicit $newScope: ${Names.NewScope}[$Scope, ${applyType(metadata.mainTrait.name,
-                                                                         metadata.mainTrait.tparams)}]) {
+              (implicit ${Names.instance(Names.NewScope)}
+              : ${Names.NewScope}[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]) {
           ..$branchDefs
           ..$leafDefs
         }"""
@@ -97,9 +97,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn.Class) {
             case Type.Apply(_, Seq(arg)) =>
               val tname = arg match {
                 case x: Type.Name => x
-                case Type.Apply(x: Type.Name, _) =>
-                  //we'll let the scala compiler re-infer this
-                  x
+                case Type.Apply(x: Type.Name, _) => x
               }
 
               if (isLocallyDefinedName(tname.value)) {

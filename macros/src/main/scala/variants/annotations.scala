@@ -43,7 +43,9 @@ class Variants(variants: String*) extends StaticAnnotation {
               }
           }
 
-        q"..$variants"
+        val ret = q"..$variants"
+        println(ret)
+        ret
 
       case other =>
         panic(s"`${constants.Variants}` can only be used on traits", other.pos)
