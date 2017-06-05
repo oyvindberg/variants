@@ -41,7 +41,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
 
     /** Foo */
     final def typeTerm: Term.Name =
-      Names.type2term(typeName)
+      type2term(typeName)
 
     /** FooFunctor */
     final def functorName: Term.Name =
@@ -73,10 +73,10 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
           .sortBy(_.typeName.value)
           .flatMap(_.asCase(Names.f))
 
-      q"""implicit lazy val ${Names.term2pat(functorName)}: ${Names.Functor}[$typeName] =
-            new ${Names.type2ctor(Names.Functor)}[$typeName] {
+      q"""implicit lazy val ${term2pat(functorName)}: ${Names.Functor}[$typeName] =
+            new ${type2ctor(Names.Functor)}[$typeName] {
               def map[$from, $to](${Names.arg}: ${applyType(typeName, Seq(from))})
-                                 (${Names.f}: ${Names.param2type(from)} => ${Names.param2type(to)})
+                                 (${Names.f}: ${param2type(from)} => ${param2type(to)})
                                  : ${applyType(typeName, Seq(to))} =
               ${Term.Match(Names.arg, cases)}
               }
@@ -87,8 +87,8 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
       Some(asFunctor(lookup))
 
     override def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${Names.argP}: ${applyTypePat(typeName, branch.tparams)} => $functorName.map(${Names.arg})($f)")
-
+      Some(
+        p"case ${term2pat(Names.arg)}: ${applyTypePat(typeName, branch.tparams)} => $functorName.map(${Names.arg})($f)")
   }
 
   final case class LocalClass(leaf: Defn.Class) extends FunctorDef {
@@ -99,23 +99,19 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
     def to:   Type.Param = Names.double(from)
 
     def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${Names.argP}: ${applyTypePat(typeName, leaf.tparams)} => $functorName.map(${Names.arg})($f)")
+      Some(
+        p"case ${{ term2pat(Names.arg) }}: ${applyTypePat(typeName, leaf.tparams)} => $functorName.map(${Names.arg})($f)")
 
     override def toSeq(lookup: Map[String, FunctorDef]): Option[Defn] =
       Some(asFunctor(lookup))
 
     def asFunctor(lookup: Map[String, FunctorDef]): Defn =
-      q"""implicit lazy val ${Names.term2pat(functorName)}: ${Names.Functor}[$typeName] =
-            new ${Names.type2ctor(Names.Functor)}[$typeName] {
+      q"""implicit lazy val ${term2pat(functorName)}: ${Names.Functor}[$typeName] =
+            new ${type2ctor(Names.Functor)}[$typeName] {
               def map[$from, $to](${Names.arg}: ${applyType(typeName, Seq(from))})
-                                 (${Names.f}: ${Names.param2type(from)} => ${Names.param2type(to)})
+                                 (${Names.f}: ${param2type(from)} => ${param2type(to)})
                                  : ${applyType(typeName, Seq(to))} =
-                ${genNewInstanceFrom(lookup,
-                                     Names.arg,
-                                     typeName,
-                                     Names.param2type(from),
-                                     Names.param2type(to),
-                                     leaf.ctor.paramss)}
+                ${genNewInstanceFrom(lookup, Names.arg, typeName, param2type(from), param2type(to), leaf.ctor.paramss)}
               }
           """
 
@@ -161,7 +157,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
           case other => unexpected(other)
         }
 
-      pss.tail.foldLeft(q"new ${Names.type2ctor(ctor)}(..${pss.head map copyParam})": Term) {
+      pss.tail.foldLeft(q"new ${type2ctor(ctor)}(..${pss.head map copyParam})": Term) {
         case (call, args) => Term.Apply(call, args map copyParam)
       }
     }
@@ -173,7 +169,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn.Class) {
     override def typeName: Type.Name = objectType(leaf)
 
     def asCase(f: Term.Name): Some[Case] =
-      Some(p"case ${Names.argP}: $typeName => ${Names.arg}")
+      Some(p"case ${{ term2pat(Names.arg) }}: $typeName => ${Names.arg}")
 
     override def toSeq(lookup: Map[String, FunctorDef]): Option[Defn.Def] =
       None

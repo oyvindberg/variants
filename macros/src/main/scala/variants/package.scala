@@ -1,4 +1,4 @@
-import scala.meta.{Ctor, Defn, Mod, Pat, Position, Tree, Type}
+import scala.meta.{Ctor, Defn, Mod, Pat, Position, Term, Tree, Type}
 
 package object variants {
   private[variants] type Seq[T] = scala.collection.immutable.Seq[T]
@@ -52,5 +52,12 @@ package object variants {
 
   def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =
     if (tparams.nonEmpty) Pat.Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
+
+  def type2term(x: Type.Name): Term.Name = Term.Name(x.value)
+  def type2ctor(x: Type.Name): Ctor.Name = Ctor.Name(x.value)
+  def term2type(x: Term.Name): Type.Name = Type.Name(x.value)
+  def param2type(x: Type.Param): Type.Name = Type.Name(x.name.value)
+  def term2pat(x: Term.Name): Pat.Var.Term = Pat.Var.Term(x)
+  def instance(x: Type.Name): Term.Name = Term.Name(x.value.toLowerCase)
 
 }
