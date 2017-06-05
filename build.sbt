@@ -31,7 +31,12 @@ lazy val macros = project.settings(
   // A dependency on scala.meta is required to write new-style macros, but not
   // to expand such macros.  This is similar to how it works for old-style
   // macros and a dependency on scala.reflect.
-  libraryDependencies += "org.scalameta" %% "scalameta" % "1.8.0"
+  libraryDependencies ++= Seq(
+    "org.scalameta" %% "scalameta" % "1.8.0",
+    "org.scalameta" %% "testkit" % "1.8.0" % Test,
+    "com.lihaoyi" %% "utest" % "0.4.7" % Test
+  ),
+  testFrameworks += new TestFramework("utest.runner.Framework")
 ).dependsOn(runtime)
 
 // Use macros in this project.

@@ -19,8 +19,8 @@ private[variants] abstract class DeriveNewInstance(lookup: Map[String, FunctorDe
     param match {
       case Term.Param(_, paramName: Term.Name, Some(tpe: Type.Arg), _) =>
         nestedParamValueExpression(paramName)(tpe) match {
-          case Some(base) => q"$paramName = ${base(Term.Select(valuesFromInstance, paramName))}"
-          case None       => q"$paramName = $valuesFromInstance.$paramName"
+          case Some(base) => Term.Arg.Named(paramName, base(Term.Select(valuesFromInstance, paramName)))
+          case None       => Term.Arg.Named(paramName, q"$valuesFromInstance.$paramName")
         }
 
       case other => unexpected(other)

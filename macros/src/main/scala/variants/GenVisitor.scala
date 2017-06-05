@@ -42,7 +42,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
                 p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
               case x: Defn.Trait =>
                 p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
-            }
+            }.sortBy(_.pat.syntax)
 
           val Tpe = applyType(tname, tparams)
 

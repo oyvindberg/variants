@@ -51,13 +51,17 @@ private[variants] object GenVariant {
       }
 
     def template(templ: Template): Template = {
-      val newParents: Seq[Ctor.Call] =
-        templ.parents flatMap {
-          case apply @ Term.Apply(fun @ Term.Annotate(term, InclusionMod(maybe, rest)), _) =>
-            maybe(thisVersion, apply.copy(fun = if (rest.isEmpty) term else fun.copy(annots = rest)))
-
-          case other => Seq(other)
+      def maybeParent(p: Term): Option[Ctor.Call] =
+        p match {
+          case applied @ Term.Apply(fun, _) => maybeParent(fun).map(newFun => applied.copy(fun = newFun))
+          case fun @ Term.Annotate(call: Ctor.Call, InclusionMod(maybe, rest)) =>
+            maybe(thisVersion, if (rest.isEmpty) call else fun.copy(annots = rest))
+          case x: Term.ApplyType => Some(x)
+          case other => None
         }
+
+      val newParents: Seq[Ctor.Call] =
+        templ.parents flatMap maybeParent
 
       templ.copy(parents = newParents, stats = templ.stats map (_ flatMap apply))
     }

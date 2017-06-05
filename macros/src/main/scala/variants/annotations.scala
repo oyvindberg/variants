@@ -17,43 +17,17 @@ class FunctorAnn extends StaticAnnotation
 
 @compileTimeOnly(s"`${constants.Variants}` can not be used here")
 class Variants(variants: String*) extends StaticAnnotation {
-  inline def apply(defn: Any): Any = meta {
 
+  inline def apply(defn: Any): Any = meta {
     val q"new ${Ctor.Name(constants.Variants)}(..$variantLiterals)" = this
 
     defn match {
-      case Defn.Trait(mods, base, tparams, _, Template(_, _, _, Some(stats))) =>
-        val variants: Seq[Stat] =
-          variantLiterals.map {
-            case Lit.String(variantString) =>
-              val restMods: Seq[Mod] =
-                mods filter {
-                  case x if x.syntax === constants.VisitorAnnot.syntax => false
-                  case x if x.syntax === constants.FunctorAnnot.syntax => false
-                  case _ => true
-                }
-
-              val variant = GenVariant(variantString, restMods, tparams, stats)
-              val metadata = AdtMetadata(variant)
-
-              val extras: Seq[Defn] =
-                mods flatMap {
-                  case x if x.syntax === constants.VisitorAnnot.syntax => Some(GenVisitor(metadata))
-                  case x if x.syntax === constants.FunctorAnnot.syntax => Some(GenFunctor(metadata))
-                  case _ => None
-                }
-
-              variant match {
-                case x@Defn.Trait(_, _, _, _, t@Template(_, _, _, Some(stats))) => x.copy(templ = t.copy(stats = Some(stats ++ extras)))
-                case x@Defn.Class(_, _, _, _, t@Template(_, _, _, Some(stats))) => x.copy(templ = t.copy(stats = Some(stats ++ extras)))
-                case x@Defn.Object(_, _, t@Template(_, _, _, Some(stats))) => x.copy(templ = t.copy(stats = Some(stats ++ extras)))
-              }
-          }
+      case t: Defn.Trait =>
+        val variants = Gen(t, variantLiterals collect { case Lit.String(str) => str })
 
         val ret = q"..$variants"
         println(ret)
         ret
-
       case other =>
         panic(s"`${constants.Variants}` can only be used on traits", other.pos)
     }

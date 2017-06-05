@@ -1,11 +1,12 @@
 package variants
 
 import scala.annotation.tailrec
+import scala.collection.immutable.SortedMap
 import scala.meta.{Ctor, Defn, Name, Stat, Template, Term, Type}
 
 private[variants] case class AdtMetadata private (adtName:        Name,
                                                   mainTrait:      Defn.Trait,
-                                                  locallyDefined: Map[String, Defn]) {
+                                                  locallyDefined: SortedMap[String, Defn]) {
   lazy val localNames: Set[String] =
     locallyDefined.keys.to[Set]
 
@@ -62,7 +63,7 @@ private[variants] object AdtMetadata {
       stats collectFirst { case x: Defn.Trait => x } getOrElse
         panic(s"ADT in ${adtName.value} must have a primary trait (defined first)", stats.head.pos)
 
-    val locallyDefined: Map[String, Defn] =
+    val locallyDefined: SortedMap[String, Defn] =
       stats.collect {
         case x @ Defn.Object(_, Term.Name(name), _)      => name -> x
         case x @ Defn.Class(_, Type.Name(name), _, _, _) => name -> x
@@ -98,6 +99,7 @@ private[variants] object AdtMetadata {
         case Ctor.Secondary(_, x, _, _) => parentName(x)
         case Term.Apply(x, _)           => parentName(x)
         case Term.ApplyType(x, _)       => parentName(x)
+        case Term.Annotate(x, _)        => parentName(x)
         case other                      => unexpected(other)
       }
 
