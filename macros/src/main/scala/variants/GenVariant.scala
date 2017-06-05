@@ -4,46 +4,28 @@ import scala.meta._
 
 private[variants] object GenVariant {
   def apply(currentObject: String, restMods: Seq[Mod], tparams: Seq[Type.Param], stats: Seq[Stat]): Defn = {
-      val filter     = TreeFilter(currentObject) andThen (_.toSeq)
-      val newStats   = stats flatMap filter
+    val filter   = TreeFilter(currentObject) andThen (_.toSeq)
+    val newStats = stats flatMap filter
 
-      if (tparams.nonEmpty)
-        q"""..$restMods trait ${Type.Name(currentObject)}[..$tparams] { ..$newStats }"""
-      else
-        q"""..$restMods object ${Term.Name(currentObject)} { ..$newStats }"""
-    }
+    if (tparams.nonEmpty)
+      q"""..$restMods trait ${Type.Name(currentObject)}[..$tparams] { ..$newStats }"""
+    else
+      q"""..$restMods object ${Term.Name(currentObject)} { ..$newStats }"""
+  }
 
   case class TreeFilter(thisVersion: String) extends (Stat => Option[Stat]) {
     override def apply(stat: Stat): Option[Stat] =
       stat match {
         case x @ Defn.Trait(InclusionMod(maybe, restMods), _, _, ctor, templ) =>
-          maybe(
-            thisVersion,
-            x.copy(
-              mods = restMods,
-              ctor = ctor.copy(paramss = paramss(ctor.paramss)),
-              templ = template(templ)
-            )
-          )
+          maybe(thisVersion,
+                x.copy(mods = restMods, ctor = ctor.copy(paramss = paramss(ctor.paramss)), templ = template(templ)))
 
         case x @ Defn.Class(InclusionMod(maybe, restMods), _, _, ctor: Ctor.Primary, templ) =>
-          maybe(
-            thisVersion,
-            x.copy(
-              mods = restMods,
-              ctor = ctor.copy(paramss = paramss(ctor.paramss)),
-              templ = template(templ)
-            )
-          )
+          maybe(thisVersion,
+                x.copy(mods = restMods, ctor = ctor.copy(paramss = paramss(ctor.paramss)), templ = template(templ)))
 
         case x @ Defn.Object(InclusionMod(maybe, restMods), _, templ) =>
-          maybe(
-            thisVersion,
-            x.copy(
-              mods = restMods,
-              templ = template(templ)
-            )
-          )
+          maybe(thisVersion, x.copy(mods = restMods, templ = template(templ)))
 
         case x @ Defn.Val(InclusionMod(maybe, restMods), _, _, _) =>
           maybe(thisVersion, x.copy(mods = restMods))
@@ -72,24 +54,17 @@ private[variants] object GenVariant {
           Some(other)
       }
 
-    def template(templ: Template): Template =
-      templ match {
-        case Template(_, parents, _, statsOpt) =>
-          val newParents: Seq[Ctor.Call] =
-            parents flatMap {
-              case apply @ Term.Apply(fun @ Term.Annotate(term, InclusionMod(maybe, rest)), _) =>
-                maybe(thisVersion, {
-                  val newFun = if (rest.isEmpty) term else fun.copy(annots = rest)
-                  apply.copy(fun = newFun)
-                })
-              case other => Seq(other)
-            }
+    def template(templ: Template): Template = {
+      val newParents: Seq[Ctor.Call] =
+        templ.parents flatMap {
+          case apply @ Term.Apply(fun @ Term.Annotate(term, InclusionMod(maybe, rest)), _) =>
+            maybe(thisVersion, apply.copy(fun = if (rest.isEmpty) term else fun.copy(annots = rest)))
 
-          val newStatsOpt: Option[Seq[Stat]] =
-            statsOpt.map(_ flatMap apply)
+          case other => Seq(other)
+        }
 
-          templ.copy(parents = newParents, stats = newStatsOpt)
-      }
+      templ.copy(parents = newParents, stats = templ.stats map (_ flatMap apply))
+    }
 
     def paramss(paramss: Seq[Seq[Term.Param]]): Seq[Seq[Term.Param]] =
       paramss.map(
