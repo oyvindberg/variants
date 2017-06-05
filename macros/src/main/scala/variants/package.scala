@@ -69,4 +69,7 @@ package object variants {
       case (false, true) => q"trait $name[..$tparams]{..$stats}"
       case _             => q"class $name[..$tparams](..$params){..$stats}"
     }
+
+  def noVariance(tp: Type.Param): Type.Param =
+    tp.copy(mods = Nil)
 }

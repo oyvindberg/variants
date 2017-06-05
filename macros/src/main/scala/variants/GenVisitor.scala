@@ -73,12 +73,14 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
           )
       }
 
+    val tparamsNoVariance: Seq[Type.Param] = metadata.mainTrait.tparams map noVariance
+
     val newScope =
-      param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]"
+      param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, tparamsNoVariance)}]"
 
     defn(
       visitorType(metadata.adtName),
-      Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: metadata.mainTrait.tparams,
+      Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: tparamsNoVariance,
       Seq(newScope) ++ metadata.externalFunctors.values.map(_.asImplicitParam),
       branchDefs ++ leafDefs
     )

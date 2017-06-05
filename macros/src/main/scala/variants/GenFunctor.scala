@@ -21,7 +21,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
   override def apply(metadata: AdtMetadata): Defn = {
     val from: Type.Param =
       metadata.mainTrait.tparams match {
-        case Seq(one) => one
+        case Seq(one) => noVariance(one)
         case more => panic(s"Only one type parameter is supported in order to generate a ${constants.Functor}. ${metadata.mainTrait.name.value} has ${more.size}", metadata.mainTrait.pos)
       }
 
