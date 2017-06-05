@@ -36,5 +36,3 @@ lazy val macros = project.settings(
 
 // Use macros in this project.
 lazy val app = project.settings(metaMacroSettings).dependsOn(macros)
-
-lazy val client = project.dependsOn(app)
