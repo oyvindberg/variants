@@ -1,5 +1,7 @@
 package variants
 
+import variants.FunctorDef.External
+
 import scala.meta._
 
 private[variants] object GenVisitor extends (AdtMetadata => Defn) {
@@ -22,6 +24,25 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
   val argX       = Term.Name("x")
 
   override def apply(metadata: AdtMetadata): Defn = {
+    val externalFunctors: Map[String, External] =
+      metadata.externalTypeCtors
+        .mapValues {
+          case applied @ Type.Apply(Type.Name(name), tparams) =>
+            tparams.size match {
+              case 1 => External(name)
+              case n => panic(s"We only support type constructors with one param, $name has $n", applied.pos)
+            }
+        }
+
+    object DeriveNewInstance extends DeriveNewInstance(externalFunctors){
+      val baseCase: PartialFunction[Type, Term => Term] = {
+        case Type.Apply(tname@Type.Name(value), _) if metadata.localNames(value) =>
+          wrap(term => q"${visitMethod(tname)}($childScope)($term)")
+        case tname@Type.Name(value) if metadata.localNames(value) =>
+          wrap(term => q"${visitMethod(tname)}($childScope)($term)")
+      }
+    }
+
     val branchDefs: Seq[Defn.Def] =
       metadata.branches.map {
         case Defn.Trait(_, tname, tparams, _, _) =>
@@ -58,59 +79,20 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
                 final def ${visitMethod(tpe)}($scope: $Scope)($first: $Tpe): $Tpe = {
                   val ${term2pat(second)}: $Tpe = ${enterMethod(tpe)}($scope)($first)
                   lazy val ${term2pat(childScope)}: $Scope = ${instance(NewScope)}.derive($scope, $second)
-                  val ${term2pat(third)}: $Tpe = ${genNewInstanceFrom(second,
-                                                                      childScope,
-                                                                      type2ctor(tpe),
-                                                                      pss,
-                                                                      metadata.localNames)}
+                  val ${term2pat(third)}: $Tpe = ${DeriveNewInstance(second, tpe, pss)}
                   $third
               }"""
           )
       }
 
-    val newScope = param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]"
+    val newScope =
+      param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, metadata.mainTrait.tparams)}]"
 
     defn(
       visitorType(metadata.adtName),
       Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: metadata.mainTrait.tparams,
-      Seq(newScope),
+      Seq(newScope) ++ externalFunctors.values.map(_.asImplicitParam),
       branchDefs ++ leafDefs
     )
-  }
-
-  def genNewInstanceFrom(owner:                Term.Name,
-                         scope:                Term.Name,
-                         ctor:                 Ctor.Name,
-                         pss:                  Seq[Seq[Term.Param]],
-                         isLocallyDefinedName: String => Boolean): Term = {
-
-    def handleParam(p: Term.Param): Term.Arg =
-      p match {
-        case Term.Param(_, paramName: Term.Name, Some(tpe), _) =>
-          tpe match {
-            case tname: Type.Name =>
-              if (isLocallyDefinedName(tname.value)) {
-                q"$paramName = ${visitMethod(tname)}($scope)($owner.$paramName)"
-              } else q"$paramName = $owner.$paramName"
-
-            case Type.Apply(_, Seq(arg)) =>
-              val tname = arg match {
-                case x: Type.Name => x
-                case Type.Apply(x: Type.Name, _) => x
-              }
-
-              if (isLocallyDefinedName(tname.value)) {
-                q"$paramName = $owner.$paramName.map(${visitMethod(tname)}($scope))"
-              } else q"$paramName = $owner.$paramName"
-
-            case other => unexpected(other)
-          }
-
-        case other => unexpected(other)
-      }
-
-    pss.tail.foldLeft(q"new $ctor(..${pss.head map handleParam})": Term) {
-      case (call, args) => Term.Apply(call, args map handleParam)
-    }
   }
 }

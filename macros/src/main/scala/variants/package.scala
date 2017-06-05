@@ -66,7 +66,7 @@ package object variants {
                              stats:   Seq[Stat]): Defn =
     (tparams.isEmpty, params.isEmpty) match {
       case (true, true)  => q"object ${type2term(name)}{..$stats}"
-      case (true, false) => q"trait $name[..$tparams]{..$stats}"
+      case (false, true) => q"trait $name[..$tparams]{..$stats}"
       case _             => q"class $name[..$tparams](..$params){..$stats}"
     }
 }
