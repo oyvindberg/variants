@@ -7,7 +7,6 @@ private[variants] object Names {
   def double(t: Type.Param): Type.Param =
     t.copy(name = Type.Name(t.name.value * 2))
 
-  val Scope    = Type.Name("Scope")
   val NewScope = Type.Name(constants.NewScope)
   val Functor  = Type.Name(constants.Functor)
 
@@ -15,7 +14,4 @@ private[variants] object Names {
   val f          = Term.Name("f")
   val arg        = Term.Name("x")
   val Y          = Term.Name("y")
-  val first      = Term.Name("_0")
-  val second     = Term.Name("_1")
-  val third      = Term.Name("_2")
 }

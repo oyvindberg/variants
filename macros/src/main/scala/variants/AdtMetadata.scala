@@ -32,9 +32,9 @@ private[variants] case class AdtMetadata private (adtName:        Name,
 private[variants] object AdtMetadata {
   def apply(defn: Defn): AdtMetadata =
     defn match {
-      case Defn.Object(_, name, t @ Template(_, _, _, Some(stats)))      => fromStats(name, stats)
-      case Defn.Trait(_, name, _, _, t @ Template(_, _, _, Some(stats))) => fromStats(name, stats)
-      case Defn.Class(_, name, _, _, t @ Template(_, _, _, Some(stats))) => fromStats(name, stats)
+      case Defn.Object(_, name, Template(_, _, _, Some(stats)))      => fromStats(name, stats)
+      case Defn.Trait(_, name, _, _, Template(_, _, _, Some(stats))) => fromStats(name, stats)
+      case Defn.Class(_, name, _, _, Template(_, _, _, Some(stats))) => fromStats(name, stats)
       case other                                                         => unexpected(other)
     }
 
@@ -90,7 +90,7 @@ private[variants] object AdtMetadata {
 
           locallyDefined.get(parentCtorName.value) match {
             case None => acc
-            case Some(parent) =>
+            case Some(_) =>
               val children: Set[Defn] = acc.getOrElse(parentCtorName.value, Set.empty)
               acc + (parentCtorName.value -> (children + x))
           }

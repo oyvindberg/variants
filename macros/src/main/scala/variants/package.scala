@@ -1,4 +1,4 @@
-import scala.meta.{Ctor, Defn, Mod, Pat, Position, Term, Tree, Type}
+import scala.meta._
 
 package object variants {
   private[variants] type Seq[T] = scala.collection.immutable.Seq[T]
@@ -10,10 +10,10 @@ package object variants {
   private[variants] def unexpected(t: Tree): Nothing =
     throw new RuntimeException(s"Unexpected: ${t.syntax} at ${t.pos}: structure: ${t.structure}")
 
-  def debug(str: String, t: Tree) =
+  private[variants] def debug(str: String, t: Tree) =
     println(s"$str: ${t.syntax}: ${t.structure}")
 
-  private [variants] implicit class AnyOps[T](private val t: T) {
+  private[variants] implicit class AnyOps[T](private val t: T) {
     def ===(other: T): Boolean = t == other
     def =/=(other: T): Boolean = t != other
   }
@@ -32,32 +32,32 @@ package object variants {
 
   private[variants] object constants {
     val FunctorAnn: String = classOf[FunctorAnn].getSimpleName
-    val Include:  String = classOf[Include].getSimpleName
-    val Exclude:  String = classOf[Exclude].getSimpleName
-    val Visitor: String = classOf[Visitor].getSimpleName
-    val Variants: String = classOf[Variants].getSimpleName
+    val Include:    String = classOf[Include].getSimpleName
+    val Exclude:    String = classOf[Exclude].getSimpleName
+    val Visitor:    String = classOf[Visitor].getSimpleName
+    val Variants:   String = classOf[Variants].getSimpleName
 
-    val Functor: String = classOf[Functor[Functor]].getSimpleName
+    val Functor:  String = classOf[Functor[Functor]].getSimpleName
     val NewScope: String = classOf[NewScope[_, _]].getSimpleName
 
     val VisitorAnnot = Mod.Annot(Ctor.Ref.Name(constants.Visitor))
     val FunctorAnnot = Mod.Annot(Ctor.Ref.Name(constants.FunctorAnn))
   }
 
-  def objectType(obj: Defn.Object): Type.Name =
+  private[variants] def objectType(obj: Defn.Object): Type.Name =
     Type.Name(obj.name.value + ".type")
 
-  def applyType(tpe: Type.Name, tparams: Seq[Type.Param]): Type =
+  private[variants] def applyType(tpe: Type.Name, tparams: Seq[Type.Param]): Type =
     if (tparams.nonEmpty) Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
 
-  def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =
+  private[variants] def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =
     if (tparams.nonEmpty) Pat.Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
 
-  def type2term(x: Type.Name): Term.Name = Term.Name(x.value)
-  def type2ctor(x: Type.Name): Ctor.Name = Ctor.Name(x.value)
-  def term2type(x: Term.Name): Type.Name = Type.Name(x.value)
-  def param2type(x: Type.Param): Type.Name = Type.Name(x.name.value)
-  def term2pat(x: Term.Name): Pat.Var.Term = Pat.Var.Term(x)
-  def instance(x: Type.Name): Term.Name = Term.Name(x.value.toLowerCase)
+  private[variants] def type2term(x:  Type.Name):  Term.Name    = Term.Name(x.value)
+  private[variants] def type2ctor(x:  Type.Name):  Ctor.Name    = Ctor.Name(x.value)
+  private[variants] def term2type(x:  Term.Name):  Type.Name    = Type.Name(x.value)
+  private[variants] def param2type(x: Type.Param): Type.Name    = Type.Name(x.name.value)
+  private[variants] def term2pat(x:   Term.Name):  Pat.Var.Term = Pat.Var.Term(x)
+  private[variants] def instance(x:   Type.Name):  Term.Name    = Term.Name(x.value.toLowerCase)
 
 }
