@@ -1,7 +1,5 @@
 package variants
 
-import variants.FunctorDef.External
-
 import scala.meta._
 
 private[variants] object GenVisitor extends (AdtMetadata => Defn) {
@@ -24,17 +22,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
   val argX       = Term.Name("x")
 
   override def apply(metadata: AdtMetadata): Defn = {
-    val externalFunctors: Map[String, External] =
-      metadata.externalTypeCtors
-        .mapValues {
-          case applied @ Type.Apply(Type.Name(name), tparams) =>
-            tparams.size match {
-              case 1 => External(name)
-              case n => panic(s"We only support type constructors with one param, $name has $n", applied.pos)
-            }
-        }
-
-    object DeriveNewInstance extends DeriveNewInstance(externalFunctors){
+    object DeriveNewInstance extends DeriveNewInstance(metadata.externalFunctors){
       val baseCase: PartialFunction[Type, Term => Term] = {
         case Type.Apply(tname@Type.Name(value), _) if metadata.localNames(value) =>
           wrap(term => q"${visitMethod(tname)}($childScope)($term)")
@@ -91,7 +79,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
     defn(
       visitorType(metadata.adtName),
       Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: metadata.mainTrait.tparams,
-      Seq(newScope) ++ externalFunctors.values.map(_.asImplicitParam),
+      Seq(newScope) ++ metadata.externalFunctors.values.map(_.asImplicitParam),
       branchDefs ++ leafDefs
     )
   }

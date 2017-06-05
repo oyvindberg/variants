@@ -35,6 +35,16 @@ private[variants] case class AdtMetadata private (adtName:        Name,
     localDefs.foldLeft(Map.empty[String, Type.Apply]) {
       case (acc, defn) => acc ++ AdtMetadata.externalTypeCtors(defn, localNames)
     }
+
+  lazy val externalFunctors: Map[String, FunctorDef.External] =
+    externalTypeCtors
+      .mapValues {
+        case applied @ Type.Apply(Type.Name(name), tparams) =>
+          tparams.size match {
+            case 1 => FunctorDef.External(name)
+            case n => panic(s"We only support type constructors with one param, $name has $n", applied.pos)
+          }
+      }
 }
 
 private[variants] object AdtMetadata {
