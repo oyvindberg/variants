@@ -1,11 +1,11 @@
-package variants
+package variants.internal
 
 import scala.meta._
 
 /**
   * An organized way to talk about names and types of the Functors we refer to throughout `GenFunctor` and `GenTransformer`
   */
-private[variants] sealed abstract class FunctorDef(functorNameStr: String) {
+sealed abstract class FunctorDef(functorNameStr: String) {
   def tpe: Type
 
   def functorName: Term.Name =
@@ -15,8 +15,9 @@ private[variants] sealed abstract class FunctorDef(functorNameStr: String) {
     Term.Param(Seq(Mod.Implicit()), functorName, Some(Type.Apply(GenFunctor.Functor, Seq(tpe))), None)
 }
 
-private[variants] object FunctorDef {
-  final case class LocalBranch(defn: Defn with Member.Type, inheritees: Set[Defn]) extends FunctorDef(defn.name.value) {
+object FunctorDef {
+  final case class LocalBranch(defn: Defn with Member.Type, inheritees: Set[Defn])
+      extends FunctorDef(defn.name.value) {
     override val tpe: Type.Name = defn.name
   }
   final case class LocalClass(defn: Defn.Class) extends FunctorDef(defn.name.value) {

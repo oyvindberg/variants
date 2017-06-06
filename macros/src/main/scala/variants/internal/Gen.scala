@@ -1,8 +1,8 @@
-package variants
+package variants.internal
 
 import scala.meta._
 
-private[variants] object Gen {
+object Gen {
   def apply(t: Defn.Trait, requestedVariantStrings: Seq[String]): Seq[Stat] = {
     val requestedVariants: Seq[RequestedVariant.Variant] =
       requestedVariantStrings.map(

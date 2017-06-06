@@ -1,8 +1,8 @@
-package variants
+package variants.internal
 
 import scala.meta._
 
-private[variants] object GenTransformer extends (AdtMetadata => Defn) {
+object GenTransformer extends (AdtMetadata => Defn) {
   def visitMethod(x: Name): Term.Name =
     Term.Name("visit" + x.value)
 
@@ -22,32 +22,36 @@ private[variants] object GenTransformer extends (AdtMetadata => Defn) {
   val argX       = Term.Name("x")
 
   override def apply(metadata: AdtMetadata): Defn = {
-    object DeriveNewInstance extends DeriveNewInstance(metadata.externalFunctors){
+    object DeriveNewInstance extends DeriveNewInstance(metadata.externalFunctors) {
       val baseCase: PartialFunction[Type, Term => Term] = {
-        case Type.Apply(tname@Type.Name(value), _) if metadata.localNames(value) =>
+        case Type.Apply(tname @ Type.Name(value), _) if metadata.localNames(value) =>
           wrap(term => q"${visitMethod(tname)}($childScope)($term)")
-        case tname@Type.Name(value) if metadata.localNames(value) =>
+        case tname @ Type.Name(value) if metadata.localNames(value) =>
           wrap(term => q"${visitMethod(tname)}($childScope)($term)")
       }
     }
 
     val branchDefs: Seq[Defn.Def] =
-      metadata.branches.map {
-        x =>
-          val cases: Seq[Case] =
-            metadata.inheritance.get(x.name.value).to[Seq].flatten.map {
+      metadata.branches.map { x =>
+        val cases: Seq[Case] =
+          metadata.inheritance
+            .get(x.name.value)
+            .to[Seq]
+            .flatten
+            .map {
               case x: Defn.Object =>
                 p"case ${term2pat(argX)}: ${objectType(x)} => ${visitMethod(x.name)}($scope)($argX)"
               case x: Defn.Class =>
                 p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
               case x: Defn.Trait =>
                 p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
-            }.sortBy(_.pat.syntax)
+            }
+            .sortBy(_.pat.syntax)
 
-          val Tpe = applyType(x.name, tparams(x))
+        val Tpe = applyType(x.name, tparams(x))
 
-          q"def ${visitMethod(x.name)}($scope: $Scope)($first: $Tpe): $Tpe = ${if (cases.nonEmpty) Term.Match(first, cases)
-          else first}"
+        q"def ${visitMethod(x.name)}($scope: $Scope)($first: $Tpe): $Tpe = ${if (cases.nonEmpty) Term.Match(first, cases)
+        else first}"
       }
 
     val leafDefs: Seq[Defn.Def] =
@@ -83,7 +87,7 @@ private[variants] object GenTransformer extends (AdtMetadata => Defn) {
 
     val implicitParams: Seq[Term.Param] = {
       val usedFunctors: Set[String] = referencedFunctorInstances(stats)
-      metadata.externalFunctors.values.filter(e => usedFunctors(e.functorName.value)).map(_.asImplicitParam).to[Seq],
+      metadata.externalFunctors.values.filter(e => usedFunctors(e.functorName.value)).map(_.asImplicitParam).to[Seq]
     }
 
     defn(

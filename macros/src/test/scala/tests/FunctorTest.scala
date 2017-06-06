@@ -1,7 +1,8 @@
-package variants
+package tests
 
 import utest._
-
+import variants.internal.Gen
+import scala.collection.immutable.Seq
 import scala.meta._
 
 object FunctorTest extends TestSuite {

@@ -1,6 +1,8 @@
-package variants
+package tests
 
 import utest._
+import variants.internal.Gen
+import scala.collection.immutable.Seq
 
 import scala.meta._
 
@@ -121,7 +123,8 @@ trait Adt {
 
       val actual: Stat = Gen(before, Seq("One", "Two")).drop(1).head
 
-      val expected = TestUtils.parseObject("""
+      val expected = TestUtils.parseObject(
+        """
 object Two {
   trait Animal[+T]
   abstract class LivingAnimal[+T] extends Animal[T]

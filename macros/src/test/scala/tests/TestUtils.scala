@@ -1,4 +1,4 @@
-package variants
+package tests
 
 import utest.AssertionError
 
@@ -10,7 +10,7 @@ object TestUtils {
       case Left(diff) =>
         println(actual.syntax)
         throw AssertionError(diff.detailed, Nil)
-      case Right(())  => 0
+      case Right(()) => 0
     }
 
   def parseTrait(s: String): Defn.Trait =

@@ -1,8 +1,8 @@
-package variants
+package variants.internal
 
 import scala.meta._
 
-private[variants] object GenVariant {
+object GenVariant {
   def apply(variant: RequestedVariant, mods: Seq[Mod], tparams: Seq[Type.Param], stats: Seq[Stat]): Defn = {
     val filter = VariantFilter(variant) andThen (_.toSeq)
     defn(mods, Type.Name(variant.name), tparams, Nil, stats flatMap filter)

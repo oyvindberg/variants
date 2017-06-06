@@ -1,8 +1,8 @@
-package variants
+package variants.internal
 
 import scala.meta._
 
-private[variants] object GenFunctor extends (AdtMetadata => Defn) {
+object GenFunctor extends (AdtMetadata => Defn) {
   val Functor = Type.Select(Term.Name(constants.variants), Type.Name(constants.Functor))
   val f       = Term.Name("f")
   val arg     = Term.Name("x")
@@ -22,14 +22,20 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
     val from: Type.Param =
       metadata.mainTrait.tparams match {
         case Seq(one) => noVariance(one)
-        case more => panic(s"Only one type parameter is supported in order to generate a ${constants.Functor}. ${metadata.mainTrait.name.value} has ${more.size}", metadata.mainTrait.pos)
+        case more =>
+          panic(
+            s"Only one type parameter is supported in order to generate a ${constants.Functor}. ${metadata.mainTrait.name.value} has ${more.size}",
+            metadata.mainTrait.pos
+          )
       }
 
-    val to:   Type.Param = repeatType(from)
+    val to: Type.Param = repeatType(from)
 
     val locallyDefinedFunctors: Map[String, FunctorDef] =
       metadata.locallyDefined mapValues {
-        case x: Defn.Class  => if (x.is[Mod.Abstract]) FunctorDef.LocalBranch(x, metadata.inheritance(x.name.value)) else FunctorDef.LocalClass(x)
+        case x: Defn.Class =>
+          if (x.is[Mod.Abstract]) FunctorDef.LocalBranch(x, metadata.inheritance(x.name.value))
+          else FunctorDef.LocalClass(x)
         case x: Defn.Object => FunctorDef.LocalObject(x)
         case x: Defn.Trait  => FunctorDef.LocalBranch(x, metadata.inheritance(x.name.value))
         case other => unexpected(other)
@@ -47,12 +53,14 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
       locallyDefinedFunctors
         .flatMap {
           case (_, x: FunctorDef.LocalBranch) =>
-            Some(functorInstance(x, from, to)(
-              Term.Match(
-                arg,
-                x.inheritees.to[Seq] flatMap localFunctor(locallyDefinedFunctors) sortBy (_.tpe.syntax) flatMap `case`
-              )
-            ))
+            Some(
+              functorInstance(x, from, to)(
+                Term.Match(
+                  arg,
+                  x.inheritees
+                    .to[Seq] flatMap localFunctor(locallyDefinedFunctors) sortBy (_.tpe.syntax) flatMap `case`
+                )
+              ))
 
           case (_, x: FunctorDef.LocalClass) =>
             Some(functorInstance(x, from, to)(deriveNewInstance(arg, x.tpe, x.defn.ctor.paramss)))

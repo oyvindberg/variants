@@ -1,8 +1,8 @@
-package variants
+package variants.internal
 
 import scala.meta._
 
-private[variants] abstract class DeriveNewInstance(lookup: Map[String, FunctorDef]) {
+abstract class DeriveNewInstance(lookup: Map[String, FunctorDef]) {
   private val arg = Term.Name("x")
 
   val baseCase: PartialFunction[Type, Term => Term]

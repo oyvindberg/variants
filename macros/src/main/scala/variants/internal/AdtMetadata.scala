@@ -1,12 +1,10 @@
-package variants
+package variants.internal
 
 import scala.annotation.tailrec
 import scala.collection.immutable.SortedMap
 import scala.meta.{Ctor, Defn, Member, Mod, Name, Stat, Template, Term, Type}
 
-private[variants] case class AdtMetadata private (adtName:        Name,
-                                                  mainTrait:      Defn.Trait,
-                                                  locallyDefined: SortedMap[String, Defn]) {
+case class AdtMetadata private (adtName: Name, mainTrait: Defn.Trait, locallyDefined: SortedMap[String, Defn]) {
   lazy val localNames: Set[String] =
     locallyDefined.keys.to[Set]
 
@@ -16,13 +14,14 @@ private[variants] case class AdtMetadata private (adtName:        Name,
   lazy val leafs: Seq[Defn] =
     localDefs.collect {
       case x: Defn.Object => x
-      case x: Defn.Class if x.mods./* wtf - no better way? */collectFirst{case x@Mod.Abstract() => x}.isEmpty =>  x
+      case x: Defn.Class if x.mods. /* wtf - no better way? */ collectFirst { case x @ Mod.Abstract() => x }.isEmpty =>
+        x
     }
 
   lazy val branches: Seq[Defn with Member.Type] =
     localDefs.collect {
       case x: Defn.Trait => x
-      case x: Defn.Class if x.mods.collectFirst{case x@Mod.Abstract() => x}.nonEmpty => x
+      case x: Defn.Class if x.mods.collectFirst { case x @ Mod.Abstract() => x }.nonEmpty => x
     }
 
   lazy val inheritance: Map[String, Set[Defn]] =
@@ -44,7 +43,7 @@ private[variants] case class AdtMetadata private (adtName:        Name,
       }
 }
 
-private[variants] object AdtMetadata {
+object AdtMetadata {
   def apply(defn: Defn): AdtMetadata =
     defn match {
       case Defn.Object(_, name, Template(_, _, _, Some(stats)))      => fromStats(name, stats)
@@ -86,7 +85,7 @@ private[variants] object AdtMetadata {
     }
 
     /* we have no use for companion objects for the analysis */
-    val (companions, restObjects) = objects.partition{case (name, _) => locallyDefined.contains(name)}
+    val (companions, restObjects) = objects.partition { case (name, _) => locallyDefined.contains(name) }
 
     AdtMetadata(adtName, mainTrait, locallyDefined ++ restObjects)
   }
