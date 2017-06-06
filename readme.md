@@ -188,12 +188,11 @@ trait Base {/* as before */}
   }
 ```
 
-This is again completely typeclass-driven, and we need to so likewise as for `Visitor`, you need to instantiate a `class` to partially apply the 
-external `Functor`s
-
+This is again completely typeclass-driven, so in the same manner as for`Visitor`, you need to instantiate a `class` to partially apply the 
+external `Functor`s.
 
 ## Limitations
-Several. You cannot be very fancy with type parameters or aliases. This macro is written before the semantic API, 
+Several. You cannot be very fancy with type parameters or aliases. This macro is written without the semantic API, 
 so any type comparison is a `String` comparison, really. Considering how easy it was to write, I'm not sure that
 is even a huge downside, though :)
   

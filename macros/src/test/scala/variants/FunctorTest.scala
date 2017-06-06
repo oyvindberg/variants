@@ -30,7 +30,6 @@ trait Adt[U] {
 }""")
 
       val actual: Stat = Gen(before, Seq("Adt1")).head
-
       val expected = TestUtils.parseTrait(
         """trait Adt1[U] {
   sealed trait A[T]
@@ -41,8 +40,8 @@ trait Adt[U] {
   case class D[T](i: Int, j: Int) extends A[T]
   case class E[T](ob: Option[B[T]], as: Seq[A[T]], d: D[T], oe: Option[E[T]]) extends A[T]
   case class F[T]() extends AAA[T]
-  class Adt1Functors(implicit SeqFunctor: Functor[Seq], OptionFunctor: Functor[Option]) {
-    implicit lazy val AFunctor: Functor[A] = new Functor[A] {
+  class Adt1Functors(implicit SeqFunctor: variants.Functor[Seq], OptionFunctor: variants.Functor[Option]) {
+    implicit lazy val AFunctor: variants.Functor[A] = new Functor[A] {
       def map[T, TT](x: A[T])(f: T => TT): A[TT] = x match {
         case x: AA[T] =>
           AAFunctor.map(x)(f)
@@ -56,23 +55,23 @@ trait Adt[U] {
           EFunctor.map(x)(f)
       }
     }
-    implicit lazy val AAFunctor: Functor[AA] = new Functor[AA] {
+    implicit lazy val AAFunctor: variants.Functor[AA] = new Functor[AA] {
       def map[T, TT](x: AA[T])(f: T => TT): AA[TT] = x match {
         case x: B[T] =>
           BFunctor.map(x)(f)
       }
     }
-    implicit lazy val AAAFunctor: Functor[AAA] = new Functor[AAA] {
+    implicit lazy val AAAFunctor: variants.Functor[AAA] = new Functor[AAA] {
       def map[T, TT](x: AAA[T])(f: T => TT): AAA[TT] = x match {
         case x: F[T] =>
           FFunctor.map(x)(f)
       }
     }
-    implicit lazy val BFunctor: Functor[B] = new Functor[B] { def map[T, TT](x: B[T])(f: T => TT): B[TT] = new B(d1 = f(x.d1), d2 = f(x.d2), u = x.u) }
-    implicit lazy val CFunctor: Functor[C] = new Functor[C] { def map[T, TT](x: C[T])(f: T => TT): C[TT] = new C(i = x.i, bs = SeqFunctor.map(x.bs)(x => BFunctor.map(x)(x => f(x)))) }
-    implicit lazy val DFunctor: Functor[D] = new Functor[D] { def map[T, TT](x: D[T])(f: T => TT): D[TT] = new D(i = x.i, j = x.j) }
-    implicit lazy val EFunctor: Functor[E] = new Functor[E] { def map[T, TT](x: E[T])(f: T => TT): E[TT] = new E(ob = OptionFunctor.map(x.ob)(x => BFunctor.map(x)(x => f(x))), as = SeqFunctor.map(x.as)(x => AFunctor.map(x)(x => f(x))), d = DFunctor.map(x.d)(x => f(x)), oe = OptionFunctor.map(x.oe)(x => EFunctor.map(x)(x => f(x)))) }
-    implicit lazy val FFunctor: Functor[F] = new Functor[F] { def map[T, TT](x: F[T])(f: T => TT): F[TT] = new F() }
+    implicit lazy val BFunctor: variants.Functor[B] = new Functor[B] { def map[T, TT](x: B[T])(f: T => TT): B[TT] = new B(d1 = f(x.d1), d2 = f(x.d2), u = x.u) }
+    implicit lazy val CFunctor: variants.Functor[C] = new Functor[C] { def map[T, TT](x: C[T])(f: T => TT): C[TT] = new C(i = x.i, bs = SeqFunctor.map(x.bs)(x => BFunctor.map(x)(x => f(x)))) }
+    implicit lazy val DFunctor: variants.Functor[D] = new Functor[D] { def map[T, TT](x: D[T])(f: T => TT): D[TT] = new D(i = x.i, j = x.j) }
+    implicit lazy val EFunctor: variants.Functor[E] = new Functor[E] { def map[T, TT](x: E[T])(f: T => TT): E[TT] = new E(ob = OptionFunctor.map(x.ob)(x => BFunctor.map(x)(x => f(x))), as = SeqFunctor.map(x.as)(x => AFunctor.map(x)(x => f(x))), d = DFunctor.map(x.d)(x => f(x)), oe = OptionFunctor.map(x.oe)(x => EFunctor.map(x)(x => f(x)))) }
+    implicit lazy val FFunctor: variants.Functor[F] = new Functor[F] { def map[T, TT](x: F[T])(f: T => TT): F[TT] = x }
   }
 }
 """)

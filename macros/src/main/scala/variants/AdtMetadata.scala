@@ -63,9 +63,11 @@ private[variants] object AdtMetadata {
       stats collectFirst { case x: Defn.Trait => x } getOrElse
         panic(s"ADT in ${adtName.value} must have a primary trait (defined first)", stats.head.pos)
 
+    val objects: SortedMap[String, Defn.Object] =
+      stats.collect { case x @ Defn.Object(_, Term.Name(name), _) => name -> x }(collection.breakOut)
+
     val locallyDefined: SortedMap[String, Defn] =
       stats.collect {
-        case x @ Defn.Object(_, Term.Name(name), _)      => name -> x
         case x @ Defn.Class(_, Type.Name(name), _, _, _) => name -> x
         case x @ Defn.Trait(_, Type.Name(name), _, _, _) => name -> x
       }(collection.breakOut)
@@ -87,7 +89,10 @@ private[variants] object AdtMetadata {
       case _                                       =>
     }
 
-    AdtMetadata(adtName, mainTrait, locallyDefined)
+    /* we have no use for companion objects for the analysis */
+    val (companions, restObjects) = objects.partition{case (name, _) => locallyDefined.contains(name)}
+
+    AdtMetadata(adtName, mainTrait, locallyDefined ++ restObjects)
   }
 
   def inheritanceMap(locallyDefined: Map[String, Defn]): Map[String, Set[Defn]] = {

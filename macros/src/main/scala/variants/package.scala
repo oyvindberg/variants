@@ -43,10 +43,10 @@ package object variants {
     val NewScope: String = classOf[NewScope[_, _]].getSimpleName
   }
 
-  private[variants] def objectType(obj: Defn.Object): Type.Name =
-    Type.Name(obj.name.value + ".type")
+  private[variants] def objectType(obj: Defn.Object): Type.Singleton =
+    Type.Singleton(obj.name)
 
-  private[variants] def applyType(tpe: Type.Name, tparams: Seq[Type.Param]): Type =
+  private[variants] def applyType(tpe: Type, tparams: Seq[Type.Param]): Type =
     if (tparams.nonEmpty) Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
 
   private[variants] def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =

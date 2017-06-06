@@ -50,12 +50,12 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
             Some(functorInstance(x, from, to)(
               Term.Match(
                 arg,
-                x.inheritees.to[Seq] flatMap localFunctor(locallyDefinedFunctors) sortBy (_.typeName.value) flatMap `case`
+                x.inheritees.to[Seq] flatMap localFunctor(locallyDefinedFunctors) sortBy (_.tpe.syntax) flatMap `case`
               )
             ))
 
           case (_, x: FunctorDef.LocalClass) =>
-            Some(functorInstance(x, from, to)(deriveNewInstance(arg, x.typeName, x.leaf.ctor.paramss)))
+            Some(functorInstance(x, from, to)(deriveNewInstance(arg, x.tpe, x.leaf.ctor.paramss)))
 
           case _ => None
         }
@@ -71,21 +71,21 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
   }
 
   def functorInstance(x: FunctorDef, from: Type.Param, to: Type.Param)(body: Term): Defn =
-    q"""implicit lazy val ${term2pat(x.functorName)}: $Functor[${x.typeName}] =
-          new ${type2ctor(Functor)}[${x.typeName}] {
-            def map[$from, $to]($arg: ${applyType(x.typeName, Seq(from))})
+    q"""implicit lazy val ${term2pat(x.functorName)}: $Functor[${x.tpe}] =
+          new ${type2ctor(Functor)}[${x.tpe}] {
+            def map[$from, $to]($arg: ${applyType(x.tpe, Seq(from))})
                                ($f: ${param2type(from)} => ${param2type(to)})
-                               : ${applyType(x.typeName, Seq(to))} = $body
+                               : ${applyType(x.tpe, Seq(to))} = $body
           }"""
 
   def `case`(fd: FunctorDef): Option[Case] =
     fd match {
       case x: FunctorDef.LocalClass =>
-        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.typeName, x.leaf.tparams)} => ${x.functorName}.map($arg)($f)")
+        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.tpe, x.leaf.tparams)} => ${x.functorName}.map($arg)($f)")
       case x: FunctorDef.LocalBranch =>
-        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.typeName, x.branch.tparams)} => ${x.functorName}.map($arg)($f)")
+        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.tpe, x.branch.tparams)} => ${x.functorName}.map($arg)($f)")
       case x: FunctorDef.LocalObject =>
-        Some(p"case ${term2pat(arg)}: ${x.typeName} => $arg")
+        Some(p"case ${term2pat(arg)}: ${x.tpe} => $arg")
       case x: FunctorDef.External =>
         None
     }

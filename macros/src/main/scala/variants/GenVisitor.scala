@@ -62,7 +62,6 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
           )
 
         case Defn.Class(_, tpe, tparams: Seq[Type.Param], Ctor.Primary(_, _, pss), _) =>
-          logger.elem(tpe, pss)
           val Tpe = applyType(tpe, tparams)
           Seq(
             q"def ${enterMethod(tpe)}($scope: $Scope)($first: $Tpe): $Tpe = $first",
