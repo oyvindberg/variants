@@ -4,14 +4,14 @@ import utest._
 
 import scala.meta._
 
-object VisitorTest extends TestSuite {
+object TransformerTest extends TestSuite {
 
   val tests = this {
     "ADT with one type param" {
 
       val before = TestUtils.parseTrait(
         """
-@Visitor
+@Transformer
 trait Adt {
 
   sealed trait A[T]
@@ -31,7 +31,8 @@ trait Adt {
 
       val actual: Stat = Gen(before, Seq("Adt1")).head
 
-      val expected = TestUtils.parseObject("""object Adt1 {
+      val expected = TestUtils.parseObject(
+        """object Adt1 {
   sealed trait A[T]
   sealed trait AA[T] extends A[T]
   sealed trait AAA[T] extends A[T]
@@ -40,7 +41,7 @@ trait Adt {
   case class D[T](i: Int, j: Int) extends A[T]
   case class E[T](ob: Option[B[T]], as: Seq[A[T]], d: D[T], oe: Option[E[T]]) extends A[T]
   case class F[T]() extends AAA[T]
-  class Adt1Visitor[Scope, T](implicit newscope: variants.NewScope[Scope, A[T]], SeqFunctor: variants.Functor[Seq], OptionFunctor: variants.Functor[Option]) {
+  class Adt1Transformer[Scope, T](implicit newscope: variants.NewScope[Scope, A[T]], SeqFunctor: variants.Functor[Seq], OptionFunctor: variants.Functor[Option]) {
     def visitA(scope: Scope)(_0: A[T]): A[T] = _0 match {
       case x: AAA[T] =>
         visitAAA(scope)(x)
@@ -93,7 +94,7 @@ trait Adt {
     final def visitF(scope: Scope)(_0: F[T]): F[T] = {
       val _1: F[T] = enterF(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
-      val _2: F[T] = _1
+      val _2: F[T] = new F()
       _2
     }
   }
@@ -107,7 +108,7 @@ trait Adt {
 
       val before = TestUtils.parseTrait(
         """
-  @Visitor
+  @Transformer
   trait Base {
     trait Animal[+T]
     @Include("Two") abstract class LivingAnimal[+T] extends Animal[T]
@@ -127,7 +128,7 @@ trait Adt {
   case class Rhino[T](weight: Int, friends: Seq[T]) extends LivingAnimal[T]
   case class Dino[T](height: Int, enemy: Option[T]) extends Animal[T]
   case object Dodo extends Animal[Nothing]
-  class TwoVisitor[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], OptionFunctor: variants.Functor[Option], SeqFunctor: variants.Functor[Seq]) {
+  class TwoTransformer[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], OptionFunctor: variants.Functor[Option], SeqFunctor: variants.Functor[Seq]) {
     def visitAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0 match {
       case x: Dino[T] =>
         visitDino(scope)(x)

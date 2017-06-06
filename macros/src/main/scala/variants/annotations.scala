@@ -9,8 +9,8 @@ class Include(targets: String*) extends StaticAnnotation
 @compileTimeOnly(s"`${constants.Exclude}` can not be used here")
 class Exclude(targets: String*) extends StaticAnnotation
 
-@compileTimeOnly(s"`${constants.Visitor}` must be used parallel to `Variants`")
-class Visitor extends StaticAnnotation
+@compileTimeOnly(s"`${constants.Transformer}` must be used parallel to `Variants`")
+class Transformer extends StaticAnnotation
 
 @compileTimeOnly(s"`${constants.FunctorAnn}` must be used parallel to `Variants`")
 class FunctorAnn extends StaticAnnotation
@@ -30,7 +30,7 @@ class Variants(variants: String*) extends StaticAnnotation {
         val variants = Gen(t, variantLiterals collect { case Lit.String(str) => str })
 
         val ret = q"..$variants"
-//        println(ret)
+        println(ret)
         ret
       case other =>
         panic(s"`${constants.Variants}` can only be used on traits", other.pos)

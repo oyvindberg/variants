@@ -3,7 +3,7 @@ package variants
 import scala.meta._
 
 /**
-  * An organized way to talk about names and types of the Functors we refer to throughout `GenFunctor` and `GenVisitor`
+  * An organized way to talk about names and types of the Functors we refer to throughout `GenFunctor` and `GenTransformer`
   */
 private[variants] sealed abstract class FunctorDef(functorNameStr: String) {
   def tpe: Type

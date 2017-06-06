@@ -7,7 +7,7 @@ private[variants] object Gen {
     variantStrings.map { variantString =>
       val restMods: Seq[Mod] =
         t.mods filter {
-          case x if x.syntax.endsWith(constants.Visitor)    => false
+          case x if x.syntax.endsWith(constants.Transformer)    => false
           case x if x.syntax.endsWith(constants.FunctorAnn) => false
           case _                                            => true
         }
@@ -17,7 +17,7 @@ private[variants] object Gen {
 
       val extras: Seq[Defn] =
         t.mods flatMap {
-          case x if x.syntax.endsWith(constants.Visitor)    => Some(GenVisitor(metadata))
+          case x if x.syntax.endsWith(constants.Transformer)    => Some(GenTransformer(metadata))
           case x if x.syntax.endsWith(constants.FunctorAnn) => Some(GenFunctor(metadata))
           case _                                            => None
         }

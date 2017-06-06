@@ -1,4 +1,4 @@
-import scala.meta._
+import scala.meta.{Transformer => _, _}
 
 package object variants {
   private[variants] type Seq[T] = scala.collection.immutable.Seq[T]
@@ -33,14 +33,13 @@ package object variants {
   private[variants] object constants {
     val variants: String = "variants"
 
-    val FunctorAnn: String = classOf[FunctorAnn].getSimpleName
-    val Include:    String = classOf[Include].getSimpleName
-    val Exclude:    String = classOf[Exclude].getSimpleName
-    val Visitor:    String = classOf[Visitor].getSimpleName
-    val Variants:   String = classOf[Variants].getSimpleName
-
-    val Functor:  String = classOf[Functor[Functor]].getSimpleName
-    val NewScope: String = classOf[NewScope[_, _]].getSimpleName
+    val FunctorAnn:  String = classOf[FunctorAnn].getSimpleName
+    val Include:     String = classOf[Include].getSimpleName
+    val Exclude:     String = classOf[Exclude].getSimpleName
+    val Transformer: String = classOf[Transformer].getSimpleName
+    val Variants:    String = classOf[Variants].getSimpleName
+    val Functor:     String = classOf[Functor[Functor]].getSimpleName
+    val NewScope:    String = classOf[NewScope[_, _]].getSimpleName
   }
 
   private[variants] def objectType(obj: Defn.Object): Type.Singleton =

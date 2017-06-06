@@ -1,18 +1,16 @@
 package variants
 
-import org.scalameta.logger
-
 import scala.meta._
 
-private[variants] object GenVisitor extends (AdtMetadata => Defn) {
+private[variants] object GenTransformer extends (AdtMetadata => Defn) {
   def visitMethod(x: Name): Term.Name =
     Term.Name("visit" + x.value)
 
   def enterMethod(x: Name): Term.Name =
     Term.Name("enter" + x.value)
 
-  def visitorType(x: Name): Type.Name =
-    Type.Name(x.value + "Visitor")
+  def transformerType(x: Name): Type.Name =
+    Type.Name(x.value + "Transformer")
 
   val NewScope   = Type.Select(Term.Name(constants.variants), Type.Name(constants.NewScope))
   val Scope      = Type.Name("Scope")
@@ -83,7 +81,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
 
     defn(
       Nil,
-      visitorType(metadata.adtName),
+      transformerType(metadata.adtName),
       Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: tparamsNoVariance,
       Seq(newScope) ++ metadata.externalFunctors.values.map(_.asImplicitParam),
       branchDefs ++ leafDefs

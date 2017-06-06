@@ -71,7 +71,7 @@ trait Adt[U] {
     implicit lazy val CFunctor: variants.Functor[C] = new Functor[C] { def map[T, TT](x: C[T])(f: T => TT): C[TT] = new C(i = x.i, bs = SeqFunctor.map(x.bs)(x => BFunctor.map(x)(x => f(x)))) }
     implicit lazy val DFunctor: variants.Functor[D] = new Functor[D] { def map[T, TT](x: D[T])(f: T => TT): D[TT] = new D(i = x.i, j = x.j) }
     implicit lazy val EFunctor: variants.Functor[E] = new Functor[E] { def map[T, TT](x: E[T])(f: T => TT): E[TT] = new E(ob = OptionFunctor.map(x.ob)(x => BFunctor.map(x)(x => f(x))), as = SeqFunctor.map(x.as)(x => AFunctor.map(x)(x => f(x))), d = DFunctor.map(x.d)(x => f(x)), oe = OptionFunctor.map(x.oe)(x => EFunctor.map(x)(x => f(x)))) }
-    implicit lazy val FFunctor: variants.Functor[F] = new Functor[F] { def map[T, TT](x: F[T])(f: T => TT): F[TT] = x }
+    implicit lazy val FFunctor: variants.Functor[F] = new Functor[F] { def map[T, TT](x: F[T])(f: T => TT): F[TT] = new F() }
   }
 }
 """)

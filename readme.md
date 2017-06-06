@@ -46,23 +46,21 @@ The `@Include` and `@Exclude` can be used for types, members and inheritance.
 Since the author has a lot of huge trees to navigate and little patience for boilerplate, 
 there is also some added goodness to help with those problems:
 
-### Visitor
+### Transformer
 
 ```scala
 @Variants("One", "Two")
-@Visitor
+@Transformer
 trait Base {/* as before */}
 ```
 
 This will expand to this:
 ```scala
-  import variants.{Functor, NewScope}
-
   object One {
     trait Animal[+T]
     case class Rhino[T](friends: Seq[Animal[T]]) extends Animal[T]()
     case class Dino[T](height: Int) extends Animal[T]()
-    class OneVisitor[Scope, T](implicit newscope: NewScope[Scope, Animal[T]], SeqFunctor: Functor[Seq]) {
+    class OneTransformer[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], SeqFunctor: variants.Functor[Seq]) {
       def visitAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0 match {
         case x: Dino[T] =>
           visitDino(scope)(x)
@@ -91,7 +89,7 @@ This will expand to this:
     case class Rhino[T](weight: Int, friends: Seq[Animal[T]], secrets: Option[Seq[T]]) extends LivingAnimal[T]()
     case class Dino[T](height: Int, enemy: Option[Animal[T]]) extends Animal[T]()
     case object Dodo extends Animal[Nothing]()
-    class TwoVisitor[Scope, T](implicit newscope: NewScope[Scope, Animal[T]], OptionFunctor: Functor[Option], SeqFunctor: Functor[Seq]) {
+    class TwoTransformer[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], OptionFunctor: variants.Functor[Option], SeqFunctor: variants.Functor[Seq]) {
       def visitAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0 match {
         case x: Dino[T] =>
           visitDino(scope)(x)
