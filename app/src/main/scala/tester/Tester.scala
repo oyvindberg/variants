@@ -1,9 +1,21 @@
 package tester
 
-import variants.{Functor, Exclude, FunctorAnn, Include, NewScope, Variants, Visitor}
+import variants.{Functor, Exclude, FunctorAnn, Include, NewScope, Variants, Transformer}
+
+object Dinos {
+  @Variants("One", "Two") @FunctorAnn
+  trait Base {
+    trait Animal[+T]
+    @Include("Two") trait LivingAnimal[+T] extends Animal[T]
+    case class Rhino[T](@Exclude("One") weight: Int, friends: Seq[Animal[T]], @Include("Two") secrets: Option[Seq[T]]) extends LivingAnimal[T] @Include("Two") with Animal[T] @Include("One")
+    case class Dino[T](height: Int, @Include("Two") enemy: Option[Animal[T]]) extends Animal[T]
+    @Include("Two")
+    case object Dodo extends Animal[Nothing]
+  }
+}
 
 object Tester extends App {
-  @Visitor
+  @Transformer
   @FunctorAnn
   @Variants("Adt1", "Adt2")
   trait Adt[U] {
@@ -30,7 +42,7 @@ object Tester extends App {
   val e: E[Double] = E(Some(B(2.2, 4.4, XX(22))), Seq(F, D(42, 21), new C(9, Seq(B(1.0, 2.0, XX(99))))), D(2, 5), None)
   val ee = e.copy(oe = Some(e))
 
-  case class V[T](implicit N: Numeric[T], newScope: NewScope[List[A[T]], A[T]]) extends Adt1Visitor[List[A[T]], T] {
+  case class V[T](implicit N: Numeric[T], newScope: NewScope[List[A[T]], A[T]]) extends Adt1Transformer[List[A[T]], T] {
     override def enterD(scope: List[A[T]])(_0: D[T]): D[T] = {
       val _1: D[T] = _0.copy(_0.i * 2)
       _1

@@ -79,12 +79,19 @@ private[variants] object GenTransformer extends (AdtMetadata => Defn) {
     val newScope =
       param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, tparamsNoVariance)}]"
 
+    val stats = branchDefs ++ leafDefs
+
+    val implicitParams: Seq[Term.Param] = {
+      val usedFunctors: Set[String] = referencedFunctorInstances(stats)
+      metadata.externalFunctors.values.filter(e => usedFunctors(e.functorName.value)).map(_.asImplicitParam).to[Seq],
+    }
+
     defn(
       Nil,
       transformerType(metadata.adtName),
       Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: tparamsNoVariance,
-      Seq(newScope) ++ metadata.externalFunctors.values.map(_.asImplicitParam),
-      branchDefs ++ leafDefs
+      Seq(newScope) ++ implicitParams,
+      stats
     )
   }
 }

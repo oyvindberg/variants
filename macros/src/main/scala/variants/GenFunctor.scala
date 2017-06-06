@@ -61,11 +61,17 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
         }
         .to[Seq]
 
+    val implicitParams = {
+      val usedFunctors: Set[String] =
+        referencedFunctorInstances(instances)
+      metadata.externalFunctors.values.filter(e => usedFunctors(e.functorName.value)).map(_.asImplicitParam).to[Seq]
+    }
+
     defn(
       Nil,
       Type.Name(metadata.adtName.value + "Functors"),
       Nil,
-      metadata.externalFunctors.values.map(_.asImplicitParam).to[Seq],
+      implicitParams,
       instances
     )
   }

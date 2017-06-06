@@ -51,14 +51,14 @@ package object variants {
   private[variants] def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =
     if (tparams.nonEmpty) Pat.Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
 
-  private[variants] def type2term(x:  Type.Name):   Term.Name    = Term.Name(x.value)
-  private[variants] def type2ctor(x:  Type.Name):   Ctor.Name    = Ctor.Name(x.value)
-  private[variants] def type2ctor(x:  Type.Select): Ctor.Name    = type2ctor(x.name)
-  private[variants] def term2type(x:  Term.Name):   Type.Name    = Type.Name(x.value)
-  private[variants] def param2type(x: Type.Param):  Type.Name    = Type.Name(x.name.value)
-  private[variants] def term2pat(x:   Term.Name):   Pat.Var.Term = Pat.Var.Term(x)
-  private[variants] def instance(x:   Type.Name):   Term.Name    = Term.Name(x.value.toLowerCase)
-  private[variants] def instance(x:   Type.Select): Term.Name    = instance(x.name)
+  private[variants] def type2term(x:  Type.Name):   Term.Name     = Term.Name(x.value)
+  private[variants] def type2ctor(x:  Type.Name):   Ctor.Ref.Name = Ctor.Name(x.value)
+  private[variants] def type2ctor(x:  Type.Select): Ctor.Ref      = Ctor.Ref.Select(x.qual, type2ctor(x.name))
+  private[variants] def term2type(x:  Term.Name):   Type.Name     = Type.Name(x.value)
+  private[variants] def param2type(x: Type.Param):  Type.Name     = Type.Name(x.name.value)
+  private[variants] def term2pat(x:   Term.Name):   Pat.Var.Term  = Pat.Var.Term(x)
+  private[variants] def instance(x:   Type.Name):   Term.Name     = Term.Name(x.value.toLowerCase)
+  private[variants] def instance(x:   Type.Select): Term.Name     = instance(x.name)
 
   private[variants] def defn(mods:    Seq[Mod],
                              name:    Type.Name,
@@ -79,4 +79,11 @@ package object variants {
       case x: Defn.Class => x.tparams
       case x: Defn.Trait => x.tparams
     }
+
+  /* ideally we would have returned these correctly in the first place, but this is good enough for now */
+  def referencedFunctorInstances(instances: Seq[Defn]): Set[String] = {
+    instances.foldLeft(Set.empty[String]) {
+      case (acc, defn) => acc ++ defn.collect { case Term.Select(Term.Name(name), Term.Name("map")) => name }
+    }
+  }
 }

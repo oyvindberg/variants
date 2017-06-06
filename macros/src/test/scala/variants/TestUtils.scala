@@ -7,7 +7,9 @@ import scala.meta._
 object TestUtils {
   def structurallyEqual(actual: Tree, expected: Tree): Int =
     scala.meta.testkit.StructurallyEqual(actual, expected) match {
-      case Left(diff) => throw AssertionError(diff.detailed, Nil)
+      case Left(diff) =>
+        println(actual.syntax)
+        throw AssertionError(diff.detailed, Nil)
       case Right(())  => 0
     }
 

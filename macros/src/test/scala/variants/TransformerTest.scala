@@ -112,8 +112,8 @@ trait Adt {
   trait Base {
     trait Animal[+T]
     @Include("Two") abstract class LivingAnimal[+T] extends Animal[T]
-    case class Rhino[T](@Exclude("One") weight: Int, friends: Seq[T]) extends LivingAnimal[T] @Include("Two") with Animal[T] @Include("One")
-    case class Dino[T](height: Int, @Include("Two") enemy: Option[T]) extends Animal[T]
+    case class Rhino[T](@Exclude("One") weight: Int, secrets: Seq[T]) extends LivingAnimal[T] @Include("Two") with Animal[T] @Include("One")
+    case class Dino[T](height: Int, @Include("Two") enemy: Option[Animal[T]]) extends Animal[T]
     @Include("Two")
     case object Dodo extends Animal[Nothing]
   }
@@ -121,14 +121,14 @@ trait Adt {
 
       val actual: Stat = Gen(before, Seq("Two")).head
 
-      val expected = TestUtils.parseObject(
-        """object Two {
+      val expected = TestUtils.parseObject("""
+object Two {
   trait Animal[+T]
   abstract class LivingAnimal[+T] extends Animal[T]
-  case class Rhino[T](weight: Int, friends: Seq[T]) extends LivingAnimal[T]
-  case class Dino[T](height: Int, enemy: Option[T]) extends Animal[T]
+  case class Rhino[T](weight: Int, secrets: Seq[T]) extends LivingAnimal[T]
+  case class Dino[T](height: Int, enemy: Option[Animal[T]]) extends Animal[T]
   case object Dodo extends Animal[Nothing]
-  class TwoTransformer[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], OptionFunctor: variants.Functor[Option], SeqFunctor: variants.Functor[Seq]) {
+  class TwoTransformer[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], OptionFunctor: variants.Functor[Option]) {
     def visitAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0 match {
       case x: Dino[T] =>
         visitDino(scope)(x)
@@ -145,7 +145,7 @@ trait Adt {
     final def visitDino(scope: Scope)(_0: Dino[T]): Dino[T] = {
       val _1: Dino[T] = enterDino(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
-      val _2: Dino[T] = new Dino(height = _1.height, enemy = _1.enemy)
+      val _2: Dino[T] = new Dino(height = _1.height, enemy = OptionFunctor.map(_1.enemy)(x => visitAnimal(childScope)(x)))
       _2
     }
     final def visitDodo(scope: Scope)(_0: Dodo.type): Dodo.type = enterDodo(scope)(_0)
@@ -154,11 +154,12 @@ trait Adt {
     final def visitRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = {
       val _1: Rhino[T] = enterRhino(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
-      val _2: Rhino[T] = new Rhino(weight = _1.weight, friends = _1.friends)
+      val _2: Rhino[T] = new Rhino(weight = _1.weight, secrets = _1.secrets)
       _2
     }
   }
 }
+
 """)
       TestUtils.structurallyEqual(actual, expected)
     }
