@@ -2,14 +2,14 @@ package variants
 
 import scala.meta._
 
-private [variants] object Gen {
+private[variants] object Gen {
   def apply(t: Defn.Trait, variantStrings: Seq[String]): Seq[Stat] =
     variantStrings.map { variantString =>
       val restMods: Seq[Mod] =
         t.mods filter {
-          case x if x.syntax === constants.VisitorAnnot.syntax => false
-          case x if x.syntax === constants.FunctorAnnot.syntax => false
-          case _                                               => true
+          case x if x.syntax.endsWith(constants.Visitor) => false
+          case x if x.syntax.endsWith(constants.Functor) => false
+          case _                                         => true
         }
 
       val variant  = GenVariant(variantString, restMods, t.tparams, t.templ.stats.getOrElse(Nil))
@@ -17,9 +17,9 @@ private [variants] object Gen {
 
       val extras: Seq[Defn] =
         t.mods flatMap {
-          case x if x.syntax === constants.VisitorAnnot.syntax => Some(GenVisitor(metadata))
-          case x if x.syntax === constants.FunctorAnnot.syntax => Some(GenFunctor(metadata))
-          case _                                               => None
+          case x if x.syntax.endsWith(constants.Visitor) => Some(GenVisitor(metadata))
+          case x if x.syntax.endsWith(constants.Functor) => Some(GenFunctor(metadata))
+          case _                                         => None
         }
 
       variant match {

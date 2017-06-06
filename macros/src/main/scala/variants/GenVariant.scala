@@ -3,10 +3,9 @@ package variants
 import scala.meta._
 
 private[variants] object GenVariant {
-  def apply(currentObject: String, restMods: Seq[Mod], tparams: Seq[Type.Param], stats: Seq[Stat]): Defn = {
+  def apply(currentObject: String, mods: Seq[Mod], tparams: Seq[Type.Param], stats: Seq[Stat]): Defn = {
     val filter = TreeFilter(currentObject) andThen (_.toSeq)
-
-    defn(Type.Name(currentObject), tparams, Nil, stats flatMap filter)
+    defn(mods, Type.Name(currentObject), tparams, Nil, stats flatMap filter)
   }
 
   case class TreeFilter(thisVersion: String) extends (Stat => Option[Stat]) {
@@ -57,7 +56,10 @@ private[variants] object GenVariant {
           case fun @ Term.Annotate(call: Ctor.Call, InclusionMod(maybe, rest)) =>
             maybe(thisVersion, if (rest.isEmpty) call else fun.copy(annots = rest))
           case x: Term.ApplyType => Some(x)
-          case other => None
+          case x: Ctor.Ref.Name => Some(x)
+          case other =>
+            unexpected(other)
+            None
         }
 
       val newParents: Seq[Ctor.Call] =

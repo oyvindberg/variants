@@ -11,9 +11,11 @@ private[variants] abstract class DeriveNewInstance(lookup: Map[String, FunctorDe
     (x: Term) => f(x)
 
   def apply(valuesFromInstance: Term.Name, ctor: Type.Name, pss: Seq[Seq[Term.Param]]): Term =
-    pss.tail.foldLeft(q"new ${type2ctor(ctor)}(..${pss.head map copyParam(valuesFromInstance)})": Term) {
-      case (call, args) => Term.Apply(call, args map copyParam(valuesFromInstance))
-    }
+    if (pss.flatten.isEmpty) valuesFromInstance
+    else
+      pss.tail.foldLeft(q"new ${type2ctor(ctor)}(..${pss.head map copyParam(valuesFromInstance)})": Term) {
+        case (call, args) => Term.Apply(call, args map copyParam(valuesFromInstance))
+      }
 
   private def copyParam(valuesFromInstance: Term.Name)(param: Term.Param): Term.Arg =
     param match {
@@ -30,11 +32,11 @@ private[variants] abstract class DeriveNewInstance(lookup: Map[String, FunctorDe
     tpe match {
       case base: Type if baseCase.isDefinedAt(base) => Some(baseCase(base))
 
-      case applied@Type.Apply(Type.Name(current), Seq(nextTpe)) =>
+      case applied @ Type.Apply(Type.Name(current), Seq(nextTpe)) =>
         nestedParamValueExpression(param)(nextTpe).map { (base: Term => Term) =>
           lookup.get(current) match {
             case Some(functor) => wrap(term => q"${functor.functorName}.map($term)((${param"$arg"}) => ${base(arg)})")
-            case None => panic(s"Expected to find a Functor instance for $current", applied.pos)
+            case None          => panic(s"Expected to find a Functor instance for $current", applied.pos)
           }
         }
 

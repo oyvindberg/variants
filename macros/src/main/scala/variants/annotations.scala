@@ -19,7 +19,11 @@ class FunctorAnn extends StaticAnnotation
 class Variants(variants: String*) extends StaticAnnotation {
 
   inline def apply(defn: Any): Any = meta {
-    val q"new ${Ctor.Name(constants.Variants)}(..$variantLiterals)" = this
+
+    val variantLiterals = this match {
+      case Term.New(Template(Nil, Seq(Term.Apply(Ctor.Ref.Select(Term.Name("variants"), Ctor.Ref.Name(constants.Variants)), vars)), _, None)) => vars
+      case q"new ${Ctor.Name(constants.Variants)}(..$vars)" => vars
+    }
 
     defn match {
       case t: Defn.Trait =>

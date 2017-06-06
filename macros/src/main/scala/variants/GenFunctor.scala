@@ -3,7 +3,7 @@ package variants
 import scala.meta._
 
 private[variants] object GenFunctor extends (AdtMetadata => Defn) {
-  val Functor = Type.Name(constants.Functor)
+  val Functor = Type.Select(Term.Name(constants.variants), Type.Name(constants.Functor))
   val f       = Term.Name("f")
   val arg     = Term.Name("x")
 
@@ -62,6 +62,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
         .to[Seq]
 
     defn(
+      Nil,
       Type.Name(metadata.adtName.value + "Functors"),
       Nil,
       metadata.externalFunctors.values.map(_.asImplicitParam).to[Seq],

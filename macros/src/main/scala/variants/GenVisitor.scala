@@ -1,5 +1,7 @@
 package variants
 
+import org.scalameta.logger
+
 import scala.meta._
 
 private[variants] object GenVisitor extends (AdtMetadata => Defn) {
@@ -12,7 +14,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
   def visitorType(x: Name): Type.Name =
     Type.Name(x.value + "Visitor")
 
-  val NewScope   = Type.Name(constants.NewScope)
+  val NewScope   = Type.Select(Term.Name(constants.variants), Type.Name(constants.NewScope))
   val Scope      = Type.Name("Scope")
   val scope      = instance(Scope)
   val first      = Term.Name("_0")
@@ -60,6 +62,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
           )
 
         case Defn.Class(_, tpe, tparams: Seq[Type.Param], Ctor.Primary(_, _, pss), _) =>
+          logger.elem(tpe, pss)
           val Tpe = applyType(tpe, tparams)
           Seq(
             q"def ${enterMethod(tpe)}($scope: $Scope)($first: $Tpe): $Tpe = $first",
@@ -67,6 +70,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
                 final def ${visitMethod(tpe)}($scope: $Scope)($first: $Tpe): $Tpe = {
                   val ${term2pat(second)}: $Tpe = ${enterMethod(tpe)}($scope)($first)
                   lazy val ${term2pat(childScope)}: $Scope = ${instance(NewScope)}.derive($scope, $second)
+
                   val ${term2pat(third)}: $Tpe = ${DeriveNewInstance(second, tpe, pss)}
                   $third
               }"""
@@ -79,6 +83,7 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
       param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, tparamsNoVariance)}]"
 
     defn(
+      Nil,
       visitorType(metadata.adtName),
       Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: tparamsNoVariance,
       Seq(newScope) ++ metadata.externalFunctors.values.map(_.asImplicitParam),

@@ -31,6 +31,8 @@ package object variants {
   }
 
   private[variants] object constants {
+    val variants: String = "variants"
+
     val FunctorAnn: String = classOf[FunctorAnn].getSimpleName
     val Include:    String = classOf[Include].getSimpleName
     val Exclude:    String = classOf[Exclude].getSimpleName
@@ -39,9 +41,6 @@ package object variants {
 
     val Functor:  String = classOf[Functor[Functor]].getSimpleName
     val NewScope: String = classOf[NewScope[_, _]].getSimpleName
-
-    val VisitorAnnot = Mod.Annot(Ctor.Ref.Name(constants.Visitor))
-    val FunctorAnnot = Mod.Annot(Ctor.Ref.Name(constants.FunctorAnn))
   }
 
   private[variants] def objectType(obj: Defn.Object): Type.Name =
@@ -53,21 +52,24 @@ package object variants {
   private[variants] def applyTypePat(tpe: Type.Name, tparams: Seq[Type.Param]): Pat.Type =
     if (tparams.nonEmpty) Pat.Type.Apply(tpe, tparams.map(tp => Type.Name(tp.name.value))) else tpe
 
-  private[variants] def type2term(x:  Type.Name):  Term.Name    = Term.Name(x.value)
-  private[variants] def type2ctor(x:  Type.Name):  Ctor.Name    = Ctor.Name(x.value)
-  private[variants] def term2type(x:  Term.Name):  Type.Name    = Type.Name(x.value)
-  private[variants] def param2type(x: Type.Param): Type.Name    = Type.Name(x.name.value)
-  private[variants] def term2pat(x:   Term.Name):  Pat.Var.Term = Pat.Var.Term(x)
-  private[variants] def instance(x:   Type.Name):  Term.Name    = Term.Name(x.value.toLowerCase)
+  private[variants] def type2term(x:  Type.Name):   Term.Name    = Term.Name(x.value)
+  private[variants] def type2ctor(x:  Type.Name):   Ctor.Name    = Ctor.Name(x.value)
+  private[variants] def type2ctor(x:  Type.Select): Ctor.Name    = type2ctor(x.name)
+  private[variants] def term2type(x:  Term.Name):   Type.Name    = Type.Name(x.value)
+  private[variants] def param2type(x: Type.Param):  Type.Name    = Type.Name(x.name.value)
+  private[variants] def term2pat(x:   Term.Name):   Pat.Var.Term = Pat.Var.Term(x)
+  private[variants] def instance(x:   Type.Name):   Term.Name    = Term.Name(x.value.toLowerCase)
+  private[variants] def instance(x:   Type.Select): Term.Name    = instance(x.name)
 
-  private[variants] def defn(name:    Type.Name,
+  private[variants] def defn(mods:    Seq[Mod],
+                             name:    Type.Name,
                              tparams: Seq[Type.Param],
                              params:  Seq[Term.Param],
                              stats:   Seq[Stat]): Defn =
     (tparams.isEmpty, params.isEmpty) match {
-      case (true, true)  => q"object ${type2term(name)}{..$stats}"
-      case (false, true) => q"trait $name[..$tparams]{..$stats}"
-      case _             => q"class $name[..$tparams](..$params){..$stats}"
+      case (true, true)  => q"..$mods object ${type2term(name)}{..$stats}"
+      case (false, true) => q"..$mods trait $name[..$tparams]{..$stats}"
+      case _             => q"..$mods class $name[..$tparams](..$params){..$stats}"
     }
 
   def noVariance(tp: Type.Param): Type.Param =
