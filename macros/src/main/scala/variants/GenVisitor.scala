@@ -35,9 +35,9 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
 
     val branchDefs: Seq[Defn.Def] =
       metadata.branches.map {
-        case Defn.Trait(_, tname, tparams, _, _) =>
+        x =>
           val cases: Seq[Case] =
-            metadata.inheritance.get(tname.value).to[Seq].flatten.map {
+            metadata.inheritance.get(x.name.value).to[Seq].flatten.map {
               case x: Defn.Object =>
                 p"case ${term2pat(argX)}: ${objectType(x)} => ${visitMethod(x.name)}($scope)($argX)"
               case x: Defn.Class =>
@@ -46,9 +46,9 @@ private[variants] object GenVisitor extends (AdtMetadata => Defn) {
                 p"case ${term2pat(argX)}: ${applyTypePat(x.name, x.tparams)} => ${visitMethod(x.name)}($scope)($argX)"
             }.sortBy(_.pat.syntax)
 
-          val Tpe = applyType(tname, tparams)
+          val Tpe = applyType(x.name, tparams(x))
 
-          q"def ${visitMethod(tname)}($scope: $Scope)($first: $Tpe): $Tpe = ${if (cases.nonEmpty) Term.Match(first, cases)
+          q"def ${visitMethod(x.name)}($scope: $Scope)($first: $Tpe): $Tpe = ${if (cases.nonEmpty) Term.Match(first, cases)
           else first}"
       }
 

@@ -31,9 +31,7 @@ trait Adt {
 
       val actual: Stat = Gen(before, Seq("Adt1")).head
 
-      val expected = TestUtils.parseObject(
-        """
-object Adt1 {
+      val expected = TestUtils.parseObject("""object Adt1 {
   sealed trait A[T]
   sealed trait AA[T] extends A[T]
   sealed trait AAA[T] extends A[T]
@@ -112,7 +110,7 @@ object Adt1 {
   @Visitor
   trait Base {
     trait Animal[+T]
-    @Include("Two") trait LivingAnimal[+T] extends Animal[T]
+    @Include("Two") abstract class LivingAnimal[+T] extends Animal[T]
     case class Rhino[T](@Exclude("One") weight: Int, friends: Seq[T]) extends LivingAnimal[T] @Include("Two") with Animal[T] @Include("One")
     case class Dino[T](height: Int, @Include("Two") enemy: Option[T]) extends Animal[T]
     @Include("Two")
@@ -125,7 +123,7 @@ object Adt1 {
       val expected = TestUtils.parseObject(
         """object Two {
   trait Animal[+T]
-  trait LivingAnimal[+T] extends Animal[T]
+  abstract class LivingAnimal[+T] extends Animal[T]
   case class Rhino[T](weight: Int, friends: Seq[T]) extends LivingAnimal[T]
   case class Dino[T](height: Int, enemy: Option[T]) extends Animal[T]
   case object Dodo extends Animal[Nothing]
@@ -160,9 +158,7 @@ object Adt1 {
     }
   }
 }
-
 """)
-
       TestUtils.structurallyEqual(actual, expected)
     }
   }

@@ -16,14 +16,14 @@ private[variants] sealed abstract class FunctorDef(functorNameStr: String) {
 }
 
 private[variants] object FunctorDef {
-  final case class LocalBranch(branch: Defn.Trait, inheritees: Set[Defn]) extends FunctorDef(branch.name.value) {
-    override val tpe: Type.Name = branch.name
+  final case class LocalBranch(defn: Defn with Member.Type, inheritees: Set[Defn]) extends FunctorDef(defn.name.value) {
+    override val tpe: Type.Name = defn.name
   }
-  final case class LocalClass(leaf: Defn.Class) extends FunctorDef(leaf.name.value) {
-    override val tpe: Type.Name = leaf.name
+  final case class LocalClass(defn: Defn.Class) extends FunctorDef(defn.name.value) {
+    override val tpe: Type.Name = defn.name
   }
-  final case class LocalObject(leaf: Defn.Object) extends FunctorDef(leaf.name.value) {
-    override val tpe: Type.Singleton = objectType(leaf)
+  final case class LocalObject(defn: Defn.Object) extends FunctorDef(defn.name.value) {
+    override val tpe: Type.Singleton = objectType(defn)
   }
   final case class External(name: String) extends FunctorDef(name) {
     override val tpe: Type.Name = Type.Name(name)

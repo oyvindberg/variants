@@ -29,9 +29,9 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
 
     val locallyDefinedFunctors: Map[String, FunctorDef] =
       metadata.locallyDefined mapValues {
-        case leaf: Defn.Class  => FunctorDef.LocalClass(leaf)
-        case leaf: Defn.Object => FunctorDef.LocalObject(leaf)
-        case leaf: Defn.Trait  => FunctorDef.LocalBranch(leaf, metadata.inheritance(leaf.name.value))
+        case x: Defn.Class  => if (x.is[Mod.Abstract]) FunctorDef.LocalBranch(x, metadata.inheritance(x.name.value)) else FunctorDef.LocalClass(x)
+        case x: Defn.Object => FunctorDef.LocalObject(x)
+        case x: Defn.Trait  => FunctorDef.LocalBranch(x, metadata.inheritance(x.name.value))
         case other => unexpected(other)
       }
 
@@ -55,7 +55,7 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
             ))
 
           case (_, x: FunctorDef.LocalClass) =>
-            Some(functorInstance(x, from, to)(deriveNewInstance(arg, x.tpe, x.leaf.ctor.paramss)))
+            Some(functorInstance(x, from, to)(deriveNewInstance(arg, x.tpe, x.defn.ctor.paramss)))
 
           case _ => None
         }
@@ -81,9 +81,9 @@ private[variants] object GenFunctor extends (AdtMetadata => Defn) {
   def `case`(fd: FunctorDef): Option[Case] =
     fd match {
       case x: FunctorDef.LocalClass =>
-        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.tpe, x.leaf.tparams)} => ${x.functorName}.map($arg)($f)")
+        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.tpe, x.defn.tparams)} => ${x.functorName}.map($arg)($f)")
       case x: FunctorDef.LocalBranch =>
-        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.tpe, x.branch.tparams)} => ${x.functorName}.map($arg)($f)")
+        Some(p"case ${term2pat(arg)}: ${applyTypePat(x.tpe, tparams(x.defn))} => ${x.functorName}.map($arg)($f)")
       case x: FunctorDef.LocalObject =>
         Some(p"case ${term2pat(arg)}: ${x.tpe} => $arg")
       case x: FunctorDef.External =>

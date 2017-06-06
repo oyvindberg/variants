@@ -2,7 +2,7 @@ package variants
 
 import scala.annotation.tailrec
 import scala.collection.immutable.SortedMap
-import scala.meta.{Ctor, Defn, Name, Stat, Template, Term, Type}
+import scala.meta.{Ctor, Defn, Member, Mod, Name, Stat, Template, Term, Type}
 
 private[variants] case class AdtMetadata private (adtName:        Name,
                                                   mainTrait:      Defn.Trait,
@@ -16,17 +16,13 @@ private[variants] case class AdtMetadata private (adtName:        Name,
   lazy val leafs: Seq[Defn] =
     localDefs.collect {
       case x: Defn.Object => x
-      case x: Defn.Class  => x
+      case x: Defn.Class if x.mods./* wtf - no better way? */collectFirst{case x@Mod.Abstract() => x}.isEmpty =>  x
     }
 
-  lazy val classes: Seq[Defn.Class] =
-    localDefs.collect {
-      case x: Defn.Class => x
-    }
-
-  lazy val branches: Seq[Defn.Trait] =
+  lazy val branches: Seq[Defn with Member.Type] =
     localDefs.collect {
       case x: Defn.Trait => x
+      case x: Defn.Class if x.mods.collectFirst{case x@Mod.Abstract() => x}.nonEmpty => x
     }
 
   lazy val inheritance: Map[String, Set[Defn]] =

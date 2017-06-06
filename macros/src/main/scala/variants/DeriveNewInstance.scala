@@ -11,7 +11,7 @@ private[variants] abstract class DeriveNewInstance(lookup: Map[String, FunctorDe
     (x: Term) => f(x)
 
   def apply(valuesFromInstance: Term.Name, ctor: Type.Name, pss: Seq[Seq[Term.Param]]): Term =
-    if (pss.flatten.isEmpty) valuesFromInstance
+    if (pss.flatten.isEmpty) q"new ${type2ctor(ctor)}()"
     else
       pss.tail.foldLeft(q"new ${type2ctor(ctor)}(..${pss.head map copyParam(valuesFromInstance)})": Term) {
         case (call, args) => Term.Apply(call, args map copyParam(valuesFromInstance))

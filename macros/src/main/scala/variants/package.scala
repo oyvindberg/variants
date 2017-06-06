@@ -74,4 +74,10 @@ package object variants {
 
   def noVariance(tp: Type.Param): Type.Param =
     tp.copy(mods = Nil)
+
+  def tparams(defn: Defn with Member.Type): Seq[Type.Param] =
+    defn match {
+      case x: Defn.Class => x.tparams
+      case x: Defn.Trait => x.tparams
+    }
 }
