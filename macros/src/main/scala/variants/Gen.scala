@@ -3,23 +3,28 @@ package variants
 import scala.meta._
 
 private[variants] object Gen {
-  def apply(t: Defn.Trait, variantStrings: Seq[String]): Seq[Stat] =
-    variantStrings.map { variantString =>
+  def apply(t: Defn.Trait, requestedVariantStrings: Seq[String]): Seq[Stat] = {
+    val requestedVariants: Seq[RequestedVariant.Variant] =
+      requestedVariantStrings.map(
+        variantString => RequestedVariant.Variant(variantString, requestedVariantStrings)
+      )
+
+    requestedVariants.map { requestedVariant =>
       val restMods: Seq[Mod] =
         t.mods filter {
-          case x if x.syntax.endsWith(constants.Transformer)    => false
-          case x if x.syntax.endsWith(constants.FunctorAnn) => false
-          case _                                            => true
+          case x if x.syntax.endsWith(constants.Transformer) => false
+          case x if x.syntax.endsWith(constants.FunctorAnn)  => false
+          case _                                             => true
         }
 
-      val variant  = GenVariant(variantString, restMods, t.tparams, t.templ.stats.getOrElse(Nil))
+      val variant  = GenVariant(requestedVariant, restMods, t.tparams, t.templ.stats.getOrElse(Nil))
       val metadata = AdtMetadata(variant)
 
       val extras: Seq[Defn] =
         t.mods flatMap {
-          case x if x.syntax.endsWith(constants.Transformer)    => Some(GenTransformer(metadata))
-          case x if x.syntax.endsWith(constants.FunctorAnn) => Some(GenFunctor(metadata))
-          case _                                            => None
+          case x if x.syntax.endsWith(constants.Transformer) => Some(GenTransformer(metadata))
+          case x if x.syntax.endsWith(constants.FunctorAnn)  => Some(GenFunctor(metadata))
+          case _                                             => None
         }
 
       variant match {
@@ -31,4 +36,5 @@ private[variants] object Gen {
           x.copy(templ = t.copy(stats = Some(newStats ++ extras)))
       }
     }
+  }
 }

@@ -29,7 +29,7 @@ trait Adt {
   case class F[T]() extends AAA[T]
 }""")
 
-      val actual: Stat = Gen(before, Seq("Adt1")).head
+      val actual: Stat = Gen(before, Seq("Adt1", "Adt2")).head
 
       val expected = TestUtils.parseObject(
         """object Adt1 {
@@ -119,7 +119,7 @@ trait Adt {
   }
 """)
 
-      val actual: Stat = Gen(before, Seq("Two")).head
+      val actual: Stat = Gen(before, Seq("One", "Two")).drop(1).head
 
       val expected = TestUtils.parseObject("""
 object Two {

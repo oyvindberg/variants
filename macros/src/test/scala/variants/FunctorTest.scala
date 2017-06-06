@@ -30,7 +30,7 @@ trait Adt[U] {
   case class G[T](f: Future[Int]) extends AAA[T]
 }""")
 
-      val actual: Stat = Gen(before, Seq("Adt1")).head
+      val actual: Stat = Gen(before, Seq("Adt1", "Adt2")).head
       val expected = TestUtils.parseTrait(
         """trait Adt1[U] {
   sealed trait A[T]
