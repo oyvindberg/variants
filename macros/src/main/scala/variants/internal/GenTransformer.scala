@@ -32,17 +32,22 @@ object GenTransformer extends (AdtMetadata => Defn) {
       }
     }
 
-    val stats: Seq[Defn.Def] =
-      (metadata.branches map createBranchVisitDef(metadata.inheritance)) ++
-        (metadata.leafs map createLeafVisitDef(DeriveNewInstance)) ++
-        (metadata.localDefs map createEntryDef)
-
+    val TransformerType: Type.Name = transformerTypeName(metadata.adtName)
     val tparamsNoVariance: Seq[Type.Param] =
       metadata.mainTrait.tparams map noVariance
 
+    val entryDefs: Seq[Defn.Def] = metadata.localDefs map createEntryDef
+
+    val methods: Seq[Defn.Def] =
+      (metadata.branches map createBranchVisitDef(metadata.inheritance)) ++
+        (metadata.leafs map createLeafVisitDef(DeriveNewInstance)) ++
+        createCombineMethods(entryDefs, TransformerType) ++
+        entryDefs
+
+
     val implicitParams: Seq[Term.Param] = {
       val usedFunctors: Set[String] =
-        referencedFunctorInstances(stats)
+        referencedFunctorsIn(methods)
 
       val externalFunctors: Seq[Term.Param] =
         metadata.externalFunctors.values.filter(e => usedFunctors(e.functorName.value)).map(_.asImplicitParam).to[Seq]
@@ -50,21 +55,26 @@ object GenTransformer extends (AdtMetadata => Defn) {
       val newScope =
         param"implicit ${instance(NewScope)}: $NewScope[$Scope, ${applyType(metadata.mainTrait.name, tparamsNoVariance)}]"
 
-      Seq(newScope) ++ implicitParams
+      Seq(newScope) ++ externalFunctors
     }
 
     val newTparams: Seq[Type.Param] =
       Type.Param(Nil, Scope, Nil, Type.Bounds(None, None), Nil, Nil) +: tparamsNoVariance
 
-//    final def >>(that: TreeVisitor[T]): TreeVisitor[T] =
-//    combine(that)
-//
-//    final def combine(that: TreeVisitor[T]): TreeVisitor[T] =
-//    new TreeVisitor[T] {
-//      override def withTree(t: T, tree: TsTree): T =
-//        self.withTree(t, tree)
+    defn(Nil, TransformerType, newTparams, implicitParams, methods)
+  }
 
-    defn(Nil, transformerTypeName(metadata.adtName), newTparams, implicitParams, stats)
+  private def createCombineMethods(entryDefs: Seq[Defn.Def], TransformerType: Type.Name) = {
+    val one = q"final def >>(that: $TransformerType[$Scope]): $TransformerType[$Scope] = combine(that)"
+    val two = q"""
+      final def combine(that: $TransformerType[$Scope]): $TransformerType[$Scope] = {
+        val self = this
+        new ${type2ctor(TransformerType)}[$Scope]{
+          ..${entryDefs.map(d => d.copy(mods = d.mods :+ Mod.Override(), body = q"that.${d.name}($scope)(self.${d.name}($scope)($first))"))}
+        }
+      }"""
+    Seq(one, two)
+
   }
 
   def createLeafVisitDef(newInstanceFrom: DeriveNewInstance)(leaf: Defn): Defn.Def =

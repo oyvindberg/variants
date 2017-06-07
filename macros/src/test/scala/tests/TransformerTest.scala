@@ -44,7 +44,7 @@ trait Adt {
   case class E[T](ob: Option[B[T]], as: Seq[A[T]], d: D[T], oe: Option[E[T]]) extends A[T]
   case class F[T]() extends AAA[T]
   class Adt1Transformer[Scope, T](implicit newscope: variants.NewScope[Scope, A[T]], SeqFunctor: variants.Functor[Seq], OptionFunctor: variants.Functor[Option]) {
-    def visitA(scope: Scope)(_0: A[T]): A[T] = _0 match {
+    final def visitA(scope: Scope)(_0: A[T]): A[T] = enterA(scope)(_0 match {
       case x: AAA[T] =>
         visitAAA(scope)(x)
       case x: AA[T] =>
@@ -55,49 +55,66 @@ trait Adt {
         visitD(scope)(x)
       case x: E[T] =>
         visitE(scope)(x)
-    }
-    def visitAA(scope: Scope)(_0: AA[T]): AA[T] = _0 match {
+    })
+    final def visitAA(scope: Scope)(_0: AA[T]): AA[T] = enterAA(scope)(_0 match {
       case x: B[T] =>
         visitB(scope)(x)
-    }
-    def visitAAA(scope: Scope)(_0: AAA[T]): AAA[T] = _0 match {
+    })
+    final def visitAAA(scope: Scope)(_0: AAA[T]): AAA[T] = enterAAA(scope)(_0 match {
       case x: F[T] =>
         visitF(scope)(x)
-    }
-    def enterB(scope: Scope)(_0: B[T]): B[T] = _0
+    })
     final def visitB(scope: Scope)(_0: B[T]): B[T] = {
       val _1: B[T] = enterB(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
       val _2: B[T] = new B(d1 = _1.d1, d2 = _1.d2, u = _1.u)
       _2
     }
-    def enterC(scope: Scope)(_0: C[T]): C[T] = _0
     final def visitC(scope: Scope)(_0: C[T]): C[T] = {
       val _1: C[T] = enterC(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
       val _2: C[T] = new C(i = _1.i, bs = SeqFunctor.map(_1.bs)(x => visitB(childScope)(x)))
       _2
     }
-    def enterD(scope: Scope)(_0: D[T]): D[T] = _0
     final def visitD(scope: Scope)(_0: D[T]): D[T] = {
       val _1: D[T] = enterD(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
       val _2: D[T] = new D(i = _1.i, j = _1.j)
       _2
     }
-    def enterE(scope: Scope)(_0: E[T]): E[T] = _0
     final def visitE(scope: Scope)(_0: E[T]): E[T] = {
       val _1: E[T] = enterE(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
       val _2: E[T] = new E(ob = OptionFunctor.map(_1.ob)(x => visitB(childScope)(x)), as = SeqFunctor.map(_1.as)(x => visitA(childScope)(x)), d = visitD(childScope)(_1.d), oe = OptionFunctor.map(_1.oe)(x => visitE(childScope)(x)))
       _2
     }
-    def enterF(scope: Scope)(_0: F[T]): F[T] = _0
     final def visitF(scope: Scope)(_0: F[T]): F[T] = {
       val _1: F[T] = enterF(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
       val _2: F[T] = new F()
       _2
+    }
+    def enterA(scope: Scope)(_0: A[T]): A[T] = _0
+    def enterAA(scope: Scope)(_0: AA[T]): AA[T] = _0
+    def enterAAA(scope: Scope)(_0: AAA[T]): AAA[T] = _0
+    def enterB(scope: Scope)(_0: B[T]): B[T] = _0
+    def enterC(scope: Scope)(_0: C[T]): C[T] = _0
+    def enterD(scope: Scope)(_0: D[T]): D[T] = _0
+    def enterE(scope: Scope)(_0: E[T]): E[T] = _0
+    def enterF(scope: Scope)(_0: F[T]): F[T] = _0
+    final def >>(that: Adt1Transformer[Scope]): Adt1Transformer[Scope] = combine(that)
+    final def combine(that: Adt1Transformer[Scope]): Adt1Transformer[Scope] = {
+      val self = this
+      new Adt1Transformer[Scope] {
+        override def enterA(scope: Scope)(_0: A[T]): A[T] = that.enterA(scope)(self.enterA(scope)(_0))
+        override def enterAA(scope: Scope)(_0: AA[T]): AA[T] = that.enterAA(scope)(self.enterAA(scope)(_0))
+        override def enterAAA(scope: Scope)(_0: AAA[T]): AAA[T] = that.enterAAA(scope)(self.enterAAA(scope)(_0))
+        override def enterB(scope: Scope)(_0: B[T]): B[T] = that.enterB(scope)(self.enterB(scope)(_0))
+        override def enterC(scope: Scope)(_0: C[T]): C[T] = that.enterC(scope)(self.enterC(scope)(_0))
+        override def enterD(scope: Scope)(_0: D[T]): D[T] = that.enterD(scope)(self.enterD(scope)(_0))
+        override def enterE(scope: Scope)(_0: E[T]): E[T] = that.enterE(scope)(self.enterE(scope)(_0))
+        override def enterF(scope: Scope)(_0: F[T]): F[T] = that.enterF(scope)(self.enterF(scope)(_0))
+      }
     }
   }
 }
@@ -132,19 +149,18 @@ object Two {
   case class Dino[T](height: Int, enemy: Option[Animal[T]]) extends Animal[T]
   case object Dodo extends Animal[Nothing]
   class TwoTransformer[Scope, T](implicit newscope: variants.NewScope[Scope, Animal[T]], OptionFunctor: variants.Functor[Option]) {
-    def visitAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0 match {
+    final def visitAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = enterAnimal(scope)(_0 match {
       case x: Dino[T] =>
         visitDino(scope)(x)
       case x: Dodo.type =>
         visitDodo(scope)(x)
       case x: LivingAnimal[T] =>
         visitLivingAnimal(scope)(x)
-    }
-    def visitLivingAnimal(scope: Scope)(_0: LivingAnimal[T]): LivingAnimal[T] = _0 match {
+    })
+    final def visitLivingAnimal(scope: Scope)(_0: LivingAnimal[T]): LivingAnimal[T] = enterLivingAnimal(scope)(_0 match {
       case x: Rhino[T] =>
         visitRhino(scope)(x)
-    }
-    def enterDino(scope: Scope)(_0: Dino[T]): Dino[T] = _0
+    })
     final def visitDino(scope: Scope)(_0: Dino[T]): Dino[T] = {
       val _1: Dino[T] = enterDino(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
@@ -152,16 +168,31 @@ object Two {
       _2
     }
     final def visitDodo(scope: Scope)(_0: Dodo.type): Dodo.type = enterDodo(scope)(_0)
-    def enterDodo(scope: Scope)(_0: Dodo.type): Dodo.type = _0
-    def enterRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = _0
     final def visitRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = {
       val _1: Rhino[T] = enterRhino(scope)(_0)
       lazy val childScope: Scope = newscope.derive(scope, _1)
       val _2: Rhino[T] = new Rhino(weight = _1.weight, secrets = _1.secrets)
       _2
     }
+    def enterAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0
+    def enterDino(scope: Scope)(_0: Dino[T]): Dino[T] = _0
+    def enterDodo(scope: Scope)(_0: Dodo.type): Dodo.type = _0
+    def enterLivingAnimal(scope: Scope)(_0: LivingAnimal[T]): LivingAnimal[T] = _0
+    def enterRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = _0
+    final def >>(that: TwoTransformer[Scope]): TwoTransformer[Scope] = combine(that)
+    final def combine(that: TwoTransformer[Scope]): TwoTransformer[Scope] = {
+      val self = this
+      new TwoTransformer[Scope] {
+        override def enterAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = that.enterAnimal(scope)(self.enterAnimal(scope)(_0))
+        override def enterDino(scope: Scope)(_0: Dino[T]): Dino[T] = that.enterDino(scope)(self.enterDino(scope)(_0))
+        override def enterDodo(scope: Scope)(_0: Dodo.type): Dodo.type = that.enterDodo(scope)(self.enterDodo(scope)(_0))
+        override def enterLivingAnimal(scope: Scope)(_0: LivingAnimal[T]): LivingAnimal[T] = that.enterLivingAnimal(scope)(self.enterLivingAnimal(scope)(_0))
+        override def enterRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = that.enterRhino(scope)(self.enterRhino(scope)(_0))
+      }
+    }
   }
 }
+
 
 """)
       TestUtils.structurallyEqual(actual, expected)

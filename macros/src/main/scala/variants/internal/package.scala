@@ -83,7 +83,7 @@ package object internal {
     }
 
   /* ideally we would have returned these correctly in the first place, but this is good enough for now */
-  def referencedFunctorInstances(instances: Seq[Defn]): Set[String] =
+  def referencedFunctorsIn(instances: Seq[Defn]): Set[String] =
     instances.foldLeft(Set.empty[String]) {
       case (acc, defn) => acc ++ defn.collect { case Term.Select(Term.Name(name), Term.Name("map")) => name }
     }

@@ -70,8 +70,7 @@ object GenFunctor extends (AdtMetadata => Defn) {
         .to[Seq]
 
     val implicitParams = {
-      val usedFunctors: Set[String] =
-        referencedFunctorInstances(instances)
+      val usedFunctors: Set[String] = referencedFunctorsIn(instances)
       metadata.externalFunctors.values.filter(e => usedFunctors(e.functorName.value)).map(_.asImplicitParam).to[Seq]
     }
 
