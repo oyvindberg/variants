@@ -94,18 +94,10 @@ trait Adt {
       val _2: F[T] = new F()
       _2
     }
-    def enterA(scope: Scope)(_0: A[T]): A[T] = _0
-    def enterAA(scope: Scope)(_0: AA[T]): AA[T] = _0
-    def enterAAA(scope: Scope)(_0: AAA[T]): AAA[T] = _0
-    def enterB(scope: Scope)(_0: B[T]): B[T] = _0
-    def enterC(scope: Scope)(_0: C[T]): C[T] = _0
-    def enterD(scope: Scope)(_0: D[T]): D[T] = _0
-    def enterE(scope: Scope)(_0: E[T]): E[T] = _0
-    def enterF(scope: Scope)(_0: F[T]): F[T] = _0
-    final def >>(that: Adt1Transformer[Scope]): Adt1Transformer[Scope] = combine(that)
-    final def combine(that: Adt1Transformer[Scope]): Adt1Transformer[Scope] = {
+    final def >>(that: Adt1Transformer[Scope, T]): Adt1Transformer[Scope, T] = combine(that)
+    final def combine(that: Adt1Transformer[Scope, T]): Adt1Transformer[Scope, T] = {
       val self = this
-      new Adt1Transformer[Scope] {
+      new Adt1Transformer[Scope, T] {
         override def enterA(scope: Scope)(_0: A[T]): A[T] = that.enterA(scope)(self.enterA(scope)(_0))
         override def enterAA(scope: Scope)(_0: AA[T]): AA[T] = that.enterAA(scope)(self.enterAA(scope)(_0))
         override def enterAAA(scope: Scope)(_0: AAA[T]): AAA[T] = that.enterAAA(scope)(self.enterAAA(scope)(_0))
@@ -116,8 +108,17 @@ trait Adt {
         override def enterF(scope: Scope)(_0: F[T]): F[T] = that.enterF(scope)(self.enterF(scope)(_0))
       }
     }
+    def enterA(scope: Scope)(_0: A[T]): A[T] = _0
+    def enterAA(scope: Scope)(_0: AA[T]): AA[T] = _0
+    def enterAAA(scope: Scope)(_0: AAA[T]): AAA[T] = _0
+    def enterB(scope: Scope)(_0: B[T]): B[T] = _0
+    def enterC(scope: Scope)(_0: C[T]): C[T] = _0
+    def enterD(scope: Scope)(_0: D[T]): D[T] = _0
+    def enterE(scope: Scope)(_0: E[T]): E[T] = _0
+    def enterF(scope: Scope)(_0: F[T]): F[T] = _0
   }
 }
+
 """)
 
       TestUtils.structurallyEqual(actual, expected)
@@ -174,15 +175,10 @@ object Two {
       val _2: Rhino[T] = new Rhino(weight = _1.weight, secrets = _1.secrets)
       _2
     }
-    def enterAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0
-    def enterDino(scope: Scope)(_0: Dino[T]): Dino[T] = _0
-    def enterDodo(scope: Scope)(_0: Dodo.type): Dodo.type = _0
-    def enterLivingAnimal(scope: Scope)(_0: LivingAnimal[T]): LivingAnimal[T] = _0
-    def enterRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = _0
-    final def >>(that: TwoTransformer[Scope]): TwoTransformer[Scope] = combine(that)
-    final def combine(that: TwoTransformer[Scope]): TwoTransformer[Scope] = {
+    final def >>(that: TwoTransformer[Scope, T]): TwoTransformer[Scope, T] = combine(that)
+    final def combine(that: TwoTransformer[Scope, T]): TwoTransformer[Scope, T] = {
       val self = this
-      new TwoTransformer[Scope] {
+      new TwoTransformer[Scope, T] {
         override def enterAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = that.enterAnimal(scope)(self.enterAnimal(scope)(_0))
         override def enterDino(scope: Scope)(_0: Dino[T]): Dino[T] = that.enterDino(scope)(self.enterDino(scope)(_0))
         override def enterDodo(scope: Scope)(_0: Dodo.type): Dodo.type = that.enterDodo(scope)(self.enterDodo(scope)(_0))
@@ -190,10 +186,13 @@ object Two {
         override def enterRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = that.enterRhino(scope)(self.enterRhino(scope)(_0))
       }
     }
+    def enterAnimal(scope: Scope)(_0: Animal[T]): Animal[T] = _0
+    def enterDino(scope: Scope)(_0: Dino[T]): Dino[T] = _0
+    def enterDodo(scope: Scope)(_0: Dodo.type): Dodo.type = _0
+    def enterLivingAnimal(scope: Scope)(_0: LivingAnimal[T]): LivingAnimal[T] = _0
+    def enterRhino(scope: Scope)(_0: Rhino[T]): Rhino[T] = _0
   }
 }
-
-
 """)
       TestUtils.structurallyEqual(actual, expected)
     }

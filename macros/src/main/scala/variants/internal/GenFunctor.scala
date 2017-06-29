@@ -24,7 +24,7 @@ object GenFunctor extends (AdtMetadata => Defn) {
         case Seq(one) => noVariance(one)
         case more =>
           panic(
-            s"Only one type parameter is supported in order to generate a ${constants.Functor}. ${metadata.mainTrait.name.value} has ${more.size}",
+            s"Exactly one type parameter is needed in order to generate a ${constants.Functor}. ${metadata.mainTrait.name.value} has ${more.size}",
             metadata.mainTrait.pos
           )
       }
@@ -41,13 +41,7 @@ object GenFunctor extends (AdtMetadata => Defn) {
         case other => unexpected(other)
       }
 
-    object deriveNewInstance extends DeriveNewInstance(locallyDefinedFunctors ++ metadata.externalFunctors) {
-      val fromTparam: Type.Name = param2type(from)
-
-      override val baseCase: PartialFunction[Type, (Term) => Term] = {
-        case name: Type.Name if fromTparam.syntax === name.syntax => wrap(term => q"$f($term)")
-      }
-    }
+    val fromTparam: Type.Name = param2type(from)
 
     val instances: Seq[Defn] =
       locallyDefinedFunctors
@@ -63,7 +57,14 @@ object GenFunctor extends (AdtMetadata => Defn) {
               ))
 
           case (_, x: FunctorDef.LocalClass) =>
-            Some(functorInstance(x, from, to)(deriveNewInstance(arg, x.tpe, x.defn.ctor.paramss)))
+            val term: Term = DeriveNewInstance(
+              locallyDefinedFunctors ++ metadata.externalFunctors,
+              {case name: Type.Name if fromTparam.syntax === name.syntax => withTerm(term => q"$f($term)")},
+              arg,
+              x.tpe,
+              x.defn.ctor.paramss
+            )
+            Some(functorInstance(x, from, to)(term))
 
           case _ => None
         }

@@ -87,4 +87,7 @@ package object internal {
     instances.foldLeft(Set.empty[String]) {
       case (acc, defn) => acc ++ defn.collect { case Term.Select(Term.Name(name), Term.Name("map")) => name }
     }
+
+  def withTerm(f: Term => Term): Term => Term =
+    (x: Term) => f(x)
 }
